@@ -1,0 +1,36 @@
+[project]
+name = "autopost-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Verga-B", email = "168764811+WiktorVerga@users.noreply.github.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "alembic>=1.20.0",
+    "apscheduler<4",
+    "authlib>=1.8.0",
+    "cryptography>=50.0.2",
+    "fastapi>=0.143.0",
+    "httpx2>=2.13.1",
+    "itsdangerous>=2.2.0",
+    "psycopg[binary]>=3.3.6",
+    "pydantic-settings>=2.15.0",
+    "pyjwt>=2.15.1",
+    "sqlalchemy>=2.1.4",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+autopost-server = "autopost_server:main"
+
+[build-system]
+requires = ["uv_build>=0.12.21,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.17.0",
+]
