@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en" data-mode="preview">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carousel template</title>
+<!--
+  INSTAGRAM CAROUSEL TEMPLATE (1080 × 1350, 4:5 format)
+  ------------------------------------------------------------------
+  How to edit it by hand:
+  1. Colors, fonts and sizes: change the variables in ":root" below.
+  2. Look of one slide type: find its block ("/* ── type: ... */").
+  3. Preview: open this file in a browser (double-click). You'll see the
+     slides of the example carousel laid out in a grid.
+  4. Content is NOT written here: it comes from each post's carousel.json.
+     The <script id="data"> block at the bottom is only an example that the
+     render script replaces.
+-->
+<style>
+@font-face {
+  font-family: "Archivo Black";
+  src: url("fonts/ArchivoBlack-Regular.ttf") format("truetype");
+  font-weight: 200 800;
+  font-stretch: 75% 100%;
+  font-display: block;
+}
+@font-face {
+  font-family: "Archivo Narrow";
+  src: url("fonts/ArchivoNarrow-VariableFont_wght.ttf") format("truetype");
+  font-weight: 200;
+  font-display: block;
+}
+
+:root {
+  /* ── Palette: the colors of coffee ──────────────────────── */
+  --espresso:   #3b312b;  /* dark background, main text          */
+  --roast:      #684f36;  /* secondary text on light background  */
+  --crema:      #b39977;  /* accent: the crema on an espresso    */
+  --hazel:      #EFD6B4;  /* light background                    */
+  --hazel-2:    #E4C49B;  /* light background, darker variant    */
+  --porcelain:  #F7F1E8;  /* rim of the cup                      */
+
+  /* ── Type ───────────────────────────────────────────────── */
+  --font-titles: "Archivo Black", "Helvetica Neue", Arial, sans-serif;
+  --font-body:   "Archivo Narrow", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --t-cover:     152px;   /* cover title                         */
+  --t-title:      86px;   /* inner slide titles                  */
+  --t-number:    360px;   /* giant number on "number" slides     */
+  --t-body:       55px;   /* body text                           */
+  --t-small:      30px;   /* kickers, handle, labels             */
+  --tracking:     .05em;  /* base letter spacing of the text     */
+
+  /* ── Spacing ────────────────────────────────────────────── */
+  --margin:       96px;   /* right, top and bottom margin        */
+  --level-w:      22px;   /* width of the "fill level" bar       */
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #1a0f0a; }
+body {
+  font-family: var(--font-body); letter-spacing: var(--tracking);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Title elements use the title font, everything else uses the body font */
+.title,
+.t-number .number, .t-number .unit,
+.t-steps li::before,
+.t-compare .col h3,
+.t-myth .myth, .t-myth .verdict { font-family: var(--font-titles); }
+
+/* Preview mode (opened in a browser): scaled-down grid */
+html[data-mode="preview"] body {
+  display: flex; flex-wrap: wrap; gap: 24px; padding: 24px;
+}
+html[data-mode="preview"] .slide { zoom: .36; }
+
+/* ── Shared slide structure ────────────────────────────────── */
+.slide {
+  position: relative;
+  width: 1080px; height: 1350px;
+  overflow: hidden;
+  background: var(--hazel);
+  color: var(--espresso);
+}
+.slide.dark { background: var(--espresso); color: var(--hazel); }
+
+/* "Fill level" bar: the cup fills up as you swipe */
+.level {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: var(--level-w);
+  background: var(--hazel-2);
+}
+.level > i {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: var(--espresso);
+}
+.slide.dark .level { background: #3d261a; }
+.slide.dark .level > i { background: var(--crema); }
+
+.content {
+  position: absolute;
+  top: var(--margin);
+  bottom: 170px;
+  left: calc(var(--level-w) + 88px);
+  right: var(--margin);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.footer {
+  position: absolute;
+  left: calc(var(--level-w) + 88px); right: var(--margin);
+  bottom: 72px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: var(--t-small); font-weight: 500;
+  color: var(--roast);
+}
+.slide.dark .footer { color: var(--crema); }
+.swipe { display: flex; align-items: center; gap: 14px; }
+.swipe svg { width: 56px; height: 20px; }
+
+.label {
+  font-size: var(--t-small); font-weight: 600;
+  color: var(--roast); letter-spacing: .01em;
+  margin-bottom: 36px;
+}
+.slide.dark .label { color: var(--crema); }
+
+.title {
+  font-size: var(--t-title); font-weight: 720; font-stretch: 82%;
+  line-height: .98; letter-spacing: -.025em;
+  margin-bottom: 48px;
+}
+.body {
+  font-size: var(--t-body); font-weight: 400;
+  line-height: 1.34; max-width: 30ch;
+}
+.body + .body { margin-top: 28px; }
+
+/* The cup seen from above (the page's signature graphic) */
+.cup {
+  position: absolute; border-radius: 50%;
+  background: var(--porcelain);
+}
+.cup::before {             /* dark inner rim */
+  content: ""; position: absolute; inset: 7%;
+  border-radius: 50%; background: #1d0f08;
+}
+.cup::after {              /* the crema */
+  content: ""; position: absolute; inset: 9.5%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 42% 38%, #f0c48c 0%, rgba(240,196,140,0) 34%),
+    radial-gradient(circle at 50% 50%, #c98a4f 0%, #b06f37 48%, #7c4421 82%, #4a2412 100%);
+}
+
+/* ── type: cover ───────────────────────────────────────────── */
+.t-cover .cup { width: 860px; height: 860px; right: -300px; top: -250px; }
+.t-cover .content { top: 560px; }
+.t-cover .content > :first-child { margin-top: auto; }
+.t-cover .title {
+  font-size: var(--t-cover); font-weight: 780; font-stretch: 76%;
+  line-height: .9; letter-spacing: -.035em; margin-bottom: 40px;
+}
+.t-cover .subtitle {
+  font-size: 46px; line-height: 1.25; max-width: 18ch;
+  color: var(--hazel-2);
+}
+
+/* ── type: text ────────────────────────────────────────────── */
+.t-text .highlight {
+  margin-top: auto;
+  font-size: 50px; font-weight: 650; font-stretch: 88%;
+  line-height: 1.12; letter-spacing: -.01em;
+  padding-left: 32px;
+  border-left: 10px solid var(--crema);
+  max-width: 20ch;
+}
+
+/* ── type: number ──────────────────────────────────────────── */
+.t-number .number {
+  font-size: var(--t-number); font-weight: 800; font-stretch: 75%;
+  line-height: .82; letter-spacing: -.02em;
+  margin-top: auto; white-space: nowrap;
+}
+.t-number .unit {
+  font-size: 120px; font-weight: 700; letter-spacing: -.02em;
+  color: var(--roast); margin-left: 18px;
+}
+.t-number .body { margin-top: 56px; }
+
+/* ── type: steps ───────────────────────────────────────────── */
+.t-steps ol { list-style: none; counter-reset: step; margin-top: auto; }
+.t-steps li {
+  counter-increment: step;
+  display: grid; grid-template-columns: 96px 1fr; align-items: baseline;
+  font-size: 46px; line-height: 1.24;
+  padding: 34px 0;
+}
+.t-steps li + li { border-top: 3px solid var(--hazel-2); }
+.t-steps li::before {
+  content: counter(step);
+  font-size: 64px; font-weight: 780; font-stretch: 78%;
+  color: var(--crema); line-height: 1;
+}
+
+/* ── type: compare (light top half, dark bottom half) ──────── */
+.t-compare .dark-half {
+  position: absolute; left: 0; right: 0; bottom: 0; top: 50%;
+  background: var(--espresso);
+}
+.t-compare .content.top { bottom: calc(50% + 48px); }
+.t-compare .content.bottom { top: calc(50% + 80px); color: var(--hazel); }
+.t-compare .title { margin-bottom: auto; }
+.t-compare .col h3 {
+  font-size: 68px; font-weight: 760; font-stretch: 80%;
+  letter-spacing: -.02em; margin-bottom: 22px; line-height: 1;
+}
+.t-compare .bottom h3 { color: var(--crema); }
+.t-compare .footer { color: var(--crema); }
+.t-compare .col p { font-size: 40px; line-height: 1.26; }
+.t-compare .col p + p { margin-top: 12px; }
+
+/* ── type: myth ────────────────────────────────────────────── */
+/* "verdict": "false" strikes the statement through, "true" leaves it intact */
+.t-myth .myth {
+  font-size: 92px; font-weight: 720; font-stretch: 80%;
+  line-height: 1.02; letter-spacing: -.02em;
+  color: var(--roast);
+  margin-bottom: 40px;
+}
+.t-myth.is-false .myth {
+  text-decoration: line-through;
+  text-decoration-color: var(--crema);
+  text-decoration-thickness: 8px;
+}
+.t-myth .verdict {
+  font-size: 96px; line-height: 1; letter-spacing: -.01em;
+  color: var(--crema);
+}
+.t-myth .body { margin-top: auto; }
+
+/* ── type: tip ─────────────────────────────────────────────── */
+.t-tip .cup { width: 260px; height: 260px; top: var(--margin); right: var(--margin); }
+.t-tip .content > :first-child { margin-top: auto; }
+.t-tip .body {
+  font-size: 66px; font-weight: 620; font-stretch: 88%;
+  line-height: 1.12; letter-spacing: -.015em; max-width: 22ch;
+}
+
+/* ── type: closing ─────────────────────────────────────────── */
+.t-closing .cup { width: 620px; height: 620px; left: 50%; top: -230px; transform: translateX(-38%); }
+.t-closing .content > :first-child { margin-top: auto; }
+.t-closing .title { font-size: 112px; font-stretch: 78%; line-height: .94; }
+.t-closing .body { color: var(--hazel-2); }
+.t-closing .cta {
+  margin-top: 56px; align-self: flex-start;
+  font-size: 46px; font-weight: 700;
+  color: var(--espresso); background: var(--crema);
+  padding: 22px 40px 24px;
+}
+</style>
+</head>
+<body>
+
+<!--
+  EXAMPLE DATA. The render script replaces the content of this block with
+  the post's carousel.json.
+-->
+<script id="data" type="application/json">
+{
+  "series": "How-to",
+  "handle": "@yourpage",
+  "slides": [
+    { "type": "cover", "kicker": "How-to", "title": "Fill a moka pot the right way", "subtitle": "Four small moves that change your morning coffee." },
+    { "type": "myth", "myth": "You should tamp the coffee down hard.", "verdict": "false", "truth": "Not in a moka pot: just level it. Packed coffee makes it hard for water to pass, and the result tastes bitter and burnt." },
+    { "type": "steps", "title": "Filling it, in order", "steps": [
+      "Water in the bottom chamber, just below the valve.",
+      "Coffee in the filter basket, no tamping.",
+      "Level it and wipe stray grounds off the rim.",
+      "Screw it shut firmly, without forcing it."
+    ] },
+    { "type": "text", "title": "Why the valve matters", "body": "It releases pressure if something gets blocked. If the water covers it, it can't do its job.", "highlight": "Keep the water below the valve." },
+    { "type": "compare", "title": "Grind: moka vs espresso", "left": { "label": "Moka", "points": ["Medium, slightly gritty", "Like fine table salt"] }, "right": { "label": "Espresso", "points": ["Fine, almost powder", "Sticks to your fingers"] } },
+    { "type": "number", "number": "1.5", "unit": "bar", "caption": "Roughly the pressure inside a moka pot. Espresso uses around 9: that's why they're two different coffees." },
+    { "type": "tip", "label": "The tip", "body": "Low heat, and never let the flame reach past the sides of the base." },
+    { "type": "closing", "title": "Save it for tomorrow morning", "body": "Four moves, no extra gear. The moka does the rest.", "cta": "Save and try it" }
+  ]
+}
+</script>
+
+<script>
+(function () {
+  const data = JSON.parse(document.getElementById("data").textContent);
+  const total = data.slides.length;
+  const handle = data.handle || "";
+  const DARK = new Set(["cover", "tip", "closing"]);
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const arrow = '<svg viewBox="0 0 56 20" aria-hidden="true"><path d="M0 10h50M42 2l9 8-9 8" fill="none" stroke="currentColor" stroke-width="3"/></svg>';
+
+  const types = {
+    cover: s => `
+      <div class="cup"></div>
+      <div class="content">
+        ${s.kicker ? `<p class="label">${esc(s.kicker)}</p>` : ""}
+        <h1 class="title" data-fit>${esc(s.title)}</h1>
+        ${s.subtitle ? `<p class="subtitle">${esc(s.subtitle)}</p>` : ""}
+      </div>`,
+    text: s => `
+      <div class="content">
+        <h2 class="title" data-fit>${esc(s.title)}</h2>
+        ${[].concat(s.body || []).map(p => `<p class="body">${esc(p)}</p>`).join("")}
+        ${s.highlight ? `<p class="highlight">${esc(s.highlight)}</p>` : ""}
+      </div>`,
+    number: s => `
+      <div class="content">
+        ${s.title ? `<h2 class="title" data-fit>${esc(s.title)}</h2>` : ""}
+        <p class="number" data-fit-w>${esc(s.number)}${s.unit ? `<span class="unit">${esc(s.unit)}</span>` : ""}</p>
+        <p class="body">${esc(s.caption)}</p>
+      </div>`,
+    steps: s => `
+      <div class="content">
+        <h2 class="title" data-fit>${esc(s.title)}</h2>
+        <ol>${(s.steps || []).map(p => `<li><span>${esc(p)}</span></li>`).join("")}</ol>
+      </div>`,
+    compare: s => {
+      const col = (c) => `
+        <div class="col">
+          <h3>${esc(c?.label)}</h3>
+          ${(c?.points || []).map(p => `<p>${esc(p)}</p>`).join("")}
+        </div>`;
+      return `
+      <div class="dark-half"></div>
+      <div class="content top">
+        <h2 class="title" data-fit>${esc(s.title)}</h2>
+        ${col(s.left)}
+      </div>
+      <div class="content bottom">${col(s.right)}</div>`;
+    },
+    myth: s => `
+      <div class="content">
+        <p class="label">People say</p>
+        <p class="myth" data-fit>${esc(s.myth)}</p>
+        <p class="verdict">${String(s.verdict).toLowerCase() === "true" ? "True." : "False."}</p>
+        <p class="body">${esc(s.truth)}</p>
+      </div>`,
+    tip: s => `
+      <div class="cup"></div>
+      <div class="content">
+        <p class="label">${esc(s.label || "The tip")}</p>
+        <p class="body" data-fit>${esc(s.body)}</p>
+      </div>`,
+    closing: s => `
+      <div class="cup"></div>
+      <div class="content">
+        <h2 class="title" data-fit>${esc(s.title)}</h2>
+        ${s.body ? `<p class="body">${esc(s.body)}</p>` : ""}
+        ${s.cta ? `<p class="cta">${esc(s.cta)}</p>` : ""}
+      </div>`
+  };
+
+  const problems = [];
+
+  data.slides.forEach((s, i) => {
+    const make = types[s.type];
+    if (!make) { problems.push(`Slide ${i + 1}: unknown type "${s.type}"`); return; }
+    const el = document.createElement("section");
+    el.className = `slide t-${s.type}` + (DARK.has(s.type) ? " dark" : "")
+      + (s.type === "myth" && String(s.verdict).toLowerCase() !== "true" ? " is-false" : "");
+    el.dataset.index = i + 1;
+    const last = i === total - 1;
+    el.innerHTML = `
+      <div class="level"><i style="height:${((i + 1) / total * 100).toFixed(2)}%"></i></div>
+      ${make(s)}
+      <div class="footer">
+        <span>${esc(handle)}</span>
+        ${i === 0 ? `<span class="swipe">Swipe ${arrow}</span>` : (last ? "" : `<span>${i + 1} of ${total}</span>`)}
+      </div>`;
+    document.body.appendChild(el);
+  });
+
+  // Auto-fit: shrinks titles until they fit (down to 72% of the original
+  // size at most), then reports the problem.
+  // Compares the children's boxes with the container (not scrollHeight, which
+  // also counts the glyphs' ink and gives false alarms with tight line-heights).
+  function overflows(box) { return overflowPx(box) > 4; }
+  function overflowPx(box) {
+    const r = box.getBoundingClientRect();
+    let over = 0;
+    for (const c of box.children) {
+      const cr = c.getBoundingClientRect();
+      over = Math.max(over, cr.bottom - r.bottom, r.top - cr.top);
+    }
+    return Math.round(over);
+  }
+
+  function fit() {
+    document.querySelectorAll(".slide").forEach(slide => {
+      const boxes = [...slide.querySelectorAll(".content")];
+      const box = boxes[0];
+      const n = slide.dataset.index;
+      const anyOverflow = () => boxes.some(overflows);
+
+      slide.querySelectorAll("[data-fit-w]").forEach(el => {
+        const base = parseFloat(getComputedStyle(el).fontSize);
+        let size = base;
+        while (el.scrollWidth > box.clientWidth + 1 && size > base * 0.5) {
+          size -= 4; el.style.fontSize = size + "px";
+        }
+      });
+
+      slide.querySelectorAll("[data-fit]").forEach(el => {
+        const base = parseFloat(getComputedStyle(el).fontSize);
+        let size = base;
+        while ((anyOverflow() || el.scrollWidth > el.clientWidth + 1) && size > base * 0.72) {
+          size -= 2; el.style.fontSize = size + "px";
+        }
+      });
+
+      boxes.forEach(b => {
+        if (overflows(b)) problems.push(`Slide ${n}: text doesn't fit (overflows by ${overflowPx(b)}px). Shorten the text.`);
+      });
+      // words so long they spill past the margin
+      slide.querySelectorAll(".content *").forEach(el => {
+        if (el.children.length === 0 && el.scrollWidth > box.clientWidth + 2) {
+          problems.push(`Slide ${n}: a word spills past the margin ("${el.textContent.slice(0, 40)}").`);
+        }
+      });
+    });
+    window.__REPORT = { ok: problems.length === 0, slides: total, problems };
+    document.documentElement.dataset.ready = "1";
+  }
+
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(fit);
+})();
+</script>
+</body>
+</html>
