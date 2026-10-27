@@ -1,16 +1,12 @@
 from datetime import datetime
-from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from autopost_server.models.enums import PostStatus
-
-Hashtag = Annotated[str, Field(min_length=1, max_length=100)]
 
 
 class PostBase(BaseModel):
     caption: str | None = None
-    hashtags: list[Hashtag] = []
     idea_id: int
     program_id: int
 
@@ -24,7 +20,6 @@ class PostUpdate(BaseModel):
     """Aggiornamento parziale: solo i campi inviati vengono modificati."""
 
     caption: str | None = None
-    hashtags: list[Hashtag] | None = None
 
 
 class SlideRead(BaseModel):
@@ -41,9 +36,18 @@ class PostRead(PostBase):
     id: int
     # gestiti dalla pipeline di generazione e pubblicazione, non modificabili dal client
     status: PostStatus
+    content: dict | None
     container_id: str | None
     media_id: str | None
     permalink: str | None
     created_at: datetime
     published_at: datetime | None
+    slides: list[SlideRead]
+
+
+class PostContentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    status: PostStatus
     slides: list[SlideRead]

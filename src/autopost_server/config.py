@@ -1,3 +1,4 @@
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from pydantic import SecretStr
@@ -26,6 +27,33 @@ class Settings(BaseSettings):
     instagram_graph_api_version: str = "v24.0"
     instagram_scopes: str = "instagram_business_basic,instagram_business_content_publish"
 
+    # --- Claude API, per generare i contenuti dei post ---
+    # opzionale: senza, il server parte ma la generazione dei post fallisce
+    anthropic_api_key: SecretStr | None = None
+    claude_model: str = "claude-opus-5-5"
+    # profondità di ragionamento: low | medium | high | xhigh | max
+    claude_effort: str = "medium"
+    # cartella dei file generati per ogni post (carousel.json, immagini delle slide)
+    media_dir: Path = Path("media")
+
+    # --- Rendering e hosting delle slide ---
+    # URL pubblico del server (es. https://autopost.example.com): le slide sono servite su
+    # {public_base_url}/media/... e Instagram le scarica da lì. Se vuoto le slide non hanno
+    # public_url e il post non è pubblicabile (il modo preview funziona comunque)
+    public_base_url: str | None = None
+    # browser usato per il rendering se né il Chromium di Playwright né Chrome/Edge di sistema
+    # sono disponibili
+    chrome_path: str | None = None
+
+    # --- Cloudflare R2, per ospitare le slide ---
+    # opzionale: se configurato le slide vengono caricate nel bucket e public_url punta a
+    # r2_public_url (dominio r2.dev o personalizzato), altrimenti si usa public_base_url
+    r2_account_id: str | None = None
+    r2_access_key_id: str | None = None
+    r2_secret_access_key: SecretStr | None = None
+    r2_bucket: str | None = None
+    r2_public_url: str | None = None
+
     # --- Sessione e JWT ---
     # firma il cookie di sessione usato solo durante il giro OAuth (state, nonce)
     session_secret_key: SecretStr
@@ -41,6 +69,18 @@ class Settings(BaseSettings):
     # dopo il login reindirizza qui (il token è nel cookie); è anche l'unica origine
     # abilitata da CORS. Se vuoto il callback restituisce il token come JSON
     frontend_url: str | None = None
+
+    @property
+    def r2_enabled(self) -> bool:
+        return all(
+            (
+                self.r2_account_id,
+                self.r2_access_key_id,
+                self.r2_secret_access_key,
+                self.r2_bucket,
+                self.r2_public_url,
+            )
+        )
 
     @property
     def frontend_origin(self) -> str | None:

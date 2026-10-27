@@ -2,18 +2,27 @@
 Instagram); l'idea collegata deve essere dello stesso utente.
 
 Lo stato e i dati di pubblicazione li gestisce la pipeline: il client crea post pending e può
-ritoccarne testo e hashtag finché non sono pubblicati.
+ritoccarne la caption finché non sono pubblicati.
 """
 
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import select
+from sqlalchemy import exists, select, update
 from sqlalchemy.orm import Session
 
+from autopost_server.api.routes.programs import get_program
 from autopost_server.db import get_db
 from autopost_server.models import Idea, InstagramAccount, Post, Program, User
 from autopost_server.models.enums import PostStatus
-from autopost_server.schemas.post import PostCreate, PostRead, PostUpdate
+from autopost_server.scheduler import submit_post_publish
+from autopost_server.schemas.post import PostCreate, PostRead, PostUpdate, PostContentRead
 from autopost_server.services.auth import get_current_user
+from autopost_server.services.storage import (
+    StorageError,
+    delete_old_slides,
+    upload_slide,
+)
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -41,6 +50,8 @@ def _check_not_published(post: Post) -> None:
     # un post pubblicato è già su Instagram: modificarlo o eliminarlo qui lo disallineerebbe
     if post.status == PostStatus.PUBLISHED:
         raise HTTPException(status.HTTP_409_CONFLICT, "The post is already published")
+    if post.status == PostStatus.PUBLISHING:
+        raise HTTPException(status.HTTP_409_CONFLICT, "The post is being published")
 
 
 @router.get("", response_model=list[PostRead])
@@ -86,6 +97,11 @@ def create_post(
     db: Session = Depends(get_db),
 ):
     _check_references(db, user, payload.program_id, payload.idea_id)
+    duplicate = db.scalar(
+        select(exists().where(Post.program_id == payload.program_id, Post.idea_id == payload.idea_id))
+    )
+    if duplicate:
+        raise HTTPException(status.HTTP_409_CONFLICT, "The program already has a post for this idea")
     post = Post(**payload.model_dump(), status=PostStatus.PENDING)
     db.add(post)
     db.commit()
@@ -113,6 +129,68 @@ def update_post(
     return post
 
 
+@router.post("/{post_id}/upload-slides", response_model=PostRead)
+def upload_post_slides(
+    post_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Ricarica le slide già renderizzate del post e ne aggiorna public_url.
+
+    Serve a provare l'upload senza rendering né generazione: lo stato del post non conta.
+    """
+    post = _get_owned_or_404(db, user, post_id)
+    if not post.slides:
+        raise HTTPException(status.HTTP_409_CONFLICT, "The post has no rendered slides")
+    paths = [Path(slide.local_path) for slide in post.slides]
+    missing = [path.name for path in paths if not path.is_file()]
+    if missing:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, f"Slide files not found: {', '.join(missing)}"
+        )
+
+    try:
+        for slide, path in zip(post.slides, paths, strict=True):
+            slide.public_url = upload_slide(post.id, path)
+        delete_old_slides(post.id, paths)
+    except StorageError as e:
+        db.rollback()
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e)) from e
+    db.commit()
+    db.refresh(post)
+    return post
+
+@router.post("/{post_id}/publish", response_model=PostRead, status_code=status.HTTP_202_ACCEPTED)
+def publish_post_manually(
+    post_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Avvia la pubblicazione e risponde subito con il post in stato publishing.
+
+    La pubblicazione su Instagram può durare minuti: gira sul thread dello scheduler e il client
+    ne segue l'esito rileggendo il post finché non diventa published o failed.
+    """
+    post = _get_owned_or_404(db, user, post_id)
+    # UPDATE condizionale: con due richieste ravvicinate solo la prima passa da generated a
+    # publishing, così il post non viene pubblicato due volte
+    claimed = db.execute(
+        update(Post)
+        .where(Post.id == post.id, Post.status == PostStatus.GENERATED)
+        .values(status=PostStatus.PUBLISHING)
+    ).rowcount
+    if not claimed:
+        db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Post {post.id} is {post.status.value}: only generated posts can be published",
+        )
+    db.commit()
+    db.refresh(post)
+    submit_post_publish(post.id)
+    return post
+
+
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(
     post_id: int,
@@ -124,3 +202,12 @@ def delete_post(
     db.delete(post)  # le slide vengono eliminate a cascata
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.get("/{post_id}/contents", response_model=PostContentRead)
+def read_posts(
+    post_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    post = _get_owned_or_404(db, user, post_id)
+    return post

@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func, text
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from autopost_server.db import Base
@@ -12,14 +12,8 @@ from autopost_server.models.enums import PostStatus
 class Post(Base):
     __tablename__ = "posts"
     __table_args__ = (
-        # un programma non può pubblicare due volte la stessa idea
-        Index(
-            "uq_post_program_idea_published",
-            "program_id",
-            "idea_id",
-            unique=True,
-            postgresql_where=text("status = 'published'"),
-        ),
+        # un solo post per idea e programma: un'esecuzione fallita riprende il post esistente
+        UniqueConstraint("program_id", "idea_id", name="uq_post_program_idea"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -27,7 +21,8 @@ class Post(Base):
         pg_enum(PostStatus, "post_status"), default=PostStatus.PENDING
     )
     caption: Mapped[str | None] = mapped_column(Text)
-    hashtags: Mapped[list[str]] = mapped_column(ARRAY(String(100)), default=list)
+    # contenuto generato da Claude (CarouselContent): salvato per non rigenerarlo dopo un errore
+    content: Mapped[dict | None] = mapped_column(JSONB)
     container_id: Mapped[str | None] = mapped_column(String(64))
     media_id: Mapped[str | None] = mapped_column(String(64))
     permalink: Mapped[str | None] = mapped_column(String(500))

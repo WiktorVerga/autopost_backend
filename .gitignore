@@ -11,3 +11,6 @@ wheels/
 
 # Segreti
 .env
+
+# File generati per i post (carousel.json, slide)
+media/

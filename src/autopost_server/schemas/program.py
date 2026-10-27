@@ -37,7 +37,13 @@ class ProgramBase(BaseModel):
 
 
 class ProgramCreate(ProgramBase):
-    pass
+    name: str
+    idea_collection_id: int
+    instagram_account_id: int
+    cron_expression: CronExpression
+    mode: ProgramMode = ProgramMode.PREVIEW
+    timezone: Timezone = "Europe/Rome"
+    is_active: bool = False
 
 
 class ProgramUpdate(BaseModel):

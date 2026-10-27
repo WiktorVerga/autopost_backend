@@ -1,5 +1,5 @@
 """Instagram API con login di Instagram (graph.instagram.com), quanto basta per collegare
-un account professionale e tenerne valido il token.
+un account professionale, tenerne valido il token e pubblicarci i post.
 
 Giro completo:
 1. dialog su instagram.com/oauth/authorize con gli scope instagram_business_*;
@@ -9,6 +9,7 @@ Giro completo:
 Il token di lunga durata va rinnovato prima della scadenza con refresh_access_token.
 """
 
+import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
@@ -136,3 +137,103 @@ async def refresh_access_token(access_token: str) -> InstagramToken:
             params={"grant_type": "ig_refresh_token", "access_token": access_token},
         )
     return _long_lived(data)
+
+
+# --- Pubblicazione ---------------------------------------------------------------------------
+# Un carosello si pubblica in tre passi: un container per immagine (is_carousel_item), il
+# container del carosello con i figli e la caption, poi media_publish sul container pronto.
+# Instagram scarica le immagini dagli URL: devono essere JPEG pubblici.
+
+CAROUSEL_MAX_ITEMS = 10
+_STATUS_POLL_SECONDS = 3
+_STATUS_POLL_ATTEMPTS = 20
+
+
+async def _create_container(
+    client: httpx2.AsyncClient, ig_user_id: str, access_token: str, **fields
+) -> str:
+    data = await _request(
+        client,
+        "POST",
+        _graph_url(f"{ig_user_id}/media"),
+        data={**fields, "access_token": access_token},
+    )
+    return str(data["id"])
+
+
+async def _wait_until_finished(
+    client: httpx2.AsyncClient, container_id: str, access_token: str
+) -> None:
+    """Attende che Instagram abbia elaborato il container (status_code FINISHED)."""
+    for _ in range(_STATUS_POLL_ATTEMPTS):
+        data = await _request(
+            client,
+            "GET",
+            _graph_url(container_id),
+            params={"fields": "status_code,status", "access_token": access_token},
+        )
+        code = data.get("status_code")
+        if code == "FINISHED":
+            return
+        if code in ("ERROR", "EXPIRED"):
+            raise InstagramError(f"Container {container_id} {code}: {data.get('status')}")
+        await asyncio.sleep(_STATUS_POLL_SECONDS)
+    raise InstagramError(f"Container {container_id} not ready after waiting")
+
+
+async def create_post_container(
+    ig_user_id: str, access_token: str, image_urls: list[str], caption: str | None
+) -> str:
+    """Crea il container del post, pronto da pubblicare: carosello o, con un'immagine, singolo."""
+    if not image_urls:
+        raise InstagramError("No images to publish")
+    if len(image_urls) > CAROUSEL_MAX_ITEMS:
+        raise InstagramError(f"A carousel has at most {CAROUSEL_MAX_ITEMS} images")
+
+    caption_field = {"caption": caption} if caption else {}
+    async with httpx2.AsyncClient(timeout=_TIMEOUT) as client:
+        if len(image_urls) == 1:
+            container_id = await _create_container(
+                client, ig_user_id, access_token, image_url=image_urls[0], **caption_field
+            )
+        else:
+            children = []
+            for url in image_urls:
+                child = await _create_container(
+                    client, ig_user_id, access_token, image_url=url, is_carousel_item="true"
+                )
+                await _wait_until_finished(client, child, access_token)
+                children.append(child)
+            container_id = await _create_container(
+                client,
+                ig_user_id,
+                access_token,
+                media_type="CAROUSEL",
+                children=",".join(children),
+                **caption_field,
+            )
+        await _wait_until_finished(client, container_id, access_token)
+    return container_id
+
+
+async def publish_container(ig_user_id: str, access_token: str, container_id: str) -> str:
+    """Pubblica il container e restituisce l'id del media pubblicato."""
+    async with httpx2.AsyncClient(timeout=_TIMEOUT) as client:
+        data = await _request(
+            client,
+            "POST",
+            _graph_url(f"{ig_user_id}/media_publish"),
+            data={"creation_id": container_id, "access_token": access_token},
+        )
+    return str(data["id"])
+
+
+async def fetch_permalink(media_id: str, access_token: str) -> str:
+    async with httpx2.AsyncClient(timeout=_TIMEOUT) as client:
+        data = await _request(
+            client,
+            "GET",
+            _graph_url(media_id),
+            params={"fields": "permalink", "access_token": access_token},
+        )
+    return data["permalink"]

@@ -7,8 +7,17 @@ from sqlalchemy.orm import Session
 
 from autopost_server.db import get_db
 from autopost_server.models import IdeaCollection, InstagramAccount, Post, Program, User
+from autopost_server.models.enums import ProgramMode
+from autopost_server.scheduler import (
+    ProgramAlreadyRunning,
+    submit_program_run,
+    sync_program,
+    unschedule_program,
+)
+from autopost_server.schemas.post import PostRead
 from autopost_server.schemas.program import ProgramCreate, ProgramRead, ProgramUpdate
 from autopost_server.services.auth import get_current_user
+from autopost_server.services.pipeline import GenerationFailed
 
 router = APIRouter(prefix="/programs", tags=["programs"])
 
@@ -78,6 +87,9 @@ def create_program(
     _check_active_has_collection(payload.is_active, payload.idea_collection_id)
     program = Program(**payload.model_dump())
     db.add(program)
+    db.flush()  # serve l'id per il job
+    # crea il job dello scheduler (solo se attivo) e calcola next_run
+    sync_program(program)
     db.commit()
     db.refresh(program)
     return program
@@ -102,9 +114,44 @@ def update_program(
     )
     for field, value in changes.items():
         setattr(program, field, value)
+    # cron, fuso orario o attivazione possono essere cambiati: riallinea il job
+    sync_program(program)
     db.commit()
     db.refresh(program)
     return program
+
+
+@router.post("/{program_id}/run", response_model=PostRead)
+async def run_program_now(
+    program_id: int,
+    mode: ProgramMode | None = Query(
+        None, description="Modo solo per questa esecuzione; se assente usa quello del programma"
+    ),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Esegue subito la pipeline, anche per un programma non attivo, e restituisce il post.
+
+    Riprende il post non completato del programma, se c'è, altrimenti ne crea uno per la prossima
+    idea. Se la generazione del contenuto fallisce il post non viene creato (502); un errore di
+    rendering o pubblicazione invece non è un errore HTTP: il post torna con status failed.
+    In entrambi i casi il dettaglio è nei log del programma.
+    """
+    program = _get_owned_or_404(db, user, program_id)
+    if program.idea_collection_id is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "The program has no idea collection")
+    try:
+        # la pipeline gira sul thread dello scheduler, con una sua sessione
+        post_id = await submit_program_run(program.id, mode)
+    except ProgramAlreadyRunning:
+        raise HTTPException(status.HTTP_409_CONFLICT, "The program is already running")
+    except GenerationFailed:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY, "Content generation failed: see the program logs"
+        )
+    if post_id is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "No ideas left in the collection")
+    return db.get(Post, post_id)
 
 
 @router.delete("/{program_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -122,4 +169,5 @@ def delete_program(
         )
     db.delete(program)  # i log vengono eliminati a cascata
     db.commit()
+    unschedule_program(program_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
