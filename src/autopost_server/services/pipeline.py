@@ -1,7 +1,12 @@
 """Pipeline di creazione e pubblicazione di un post, eseguita dallo scheduler per un programma.
 
     idea -> post del programma per l'idea (se c'è) -> contenuto (Claude, solo se manca) ->
-    post pending -> rendering -> generated -> (solo modo publish) publish_post -> published
+    post pending -> rendering -> generated -> (solo modo publish) publishing -> publish_post ->
+    published
+
+La pubblicazione su Instagram può durare minuti: chi lancia la pipeline può farsi avvisare con
+`on_publishing` quando il post passa a publishing, e da lì seguirne l'esito dallo stato del post e
+dai log invece di attendere la fine.
 
 Per ogni programma ogni idea ha al più un post, identificato da (program_id, idea_id):
 - se il post esiste viene aggiornato per tutta la pipeline, riusando il contenuto già generato;
@@ -12,6 +17,8 @@ Per ogni programma ogni idea ha al più un post, identificato da (program_id, id
 """
 
 import asyncio
+import logging
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -28,9 +35,12 @@ from autopost_server.services.generation import (
 from autopost_server.services.logs import log_error, log_info, log_success
 from autopost_server.services.rendering import RenderError, render_slides
 
+logger = logging.getLogger(__name__)
+
 # un post in questi stati ha completato la pipeline: la sua idea non va più lavorata
 _DONE_STATUSES = (PostStatus.GENERATED, PostStatus.PUBLISHING, PostStatus.PUBLISHED)
-# stati da cui si può pubblicare: publishing è un generated già preso da una pubblicazione manuale
+# stati da cui si può pubblicare: publishing è un generated già preso dalla pipeline o da una
+# pubblicazione manuale
 _PUBLISHABLE_STATUSES = (PostStatus.GENERATED, PostStatus.PUBLISHING)
 
 
@@ -75,10 +85,15 @@ def _check_post(post: Post, program: Program, idea: Idea) -> None:
 
 
 async def run_program_pipeline(
-    db: Session, program: Program, mode: ProgramMode | None = None
+    db: Session,
+    program: Program,
+    mode: ProgramMode | None = None,
+    on_publishing: Callable[[Post], None] | None = None,
 ) -> Post | None:
     """`mode` sostituisce il modo del programma solo per questa esecuzione.
 
+    `on_publishing` viene chiamata col post appena passato a publishing (solo modo publish),
+    prima di iniziare la pubblicazione.
     Restituisce None se non ci sono idee da usare; solleva GenerationFailed se la generazione
     del contenuto fallisce.
     """
@@ -125,8 +140,12 @@ async def run_program_pipeline(
         log_success(db, program.id, f"Post {post.id} generated (preview)", idea_id=idea.id)
         return post
 
-    # gestisce da sé errori, stato e log
-    return await publish_post(db, post)
+    post.status = PostStatus.PUBLISHING
+    db.commit()
+    log_info(db, program.id, f"Post {post.id} publishing started", idea_id=idea.id)
+    if on_publishing is not None:
+        on_publishing(post)
+    return await publish_post_safely(db, post)
 
 
 def set_content(post: Post, content: CarouselContent) -> None:
@@ -169,13 +188,35 @@ async def render_post(db: Session, post: Post) -> None:
         )
 
 
+async def publish_post_safely(db: Session, post: Post) -> Post:
+    """publish_post per un post già publishing: anche un errore imprevisto lo porta a failed.
+
+    Serve a chi pubblica senza che nessuno attenda l'esito: il post non deve mai restare
+    publishing. Solleva solo PublishNotAllowed.
+    """
+    try:
+        # gestisce da sé errori, stato e log
+        return await publish_post(db, post)
+    except PublishNotAllowed:
+        raise
+    except Exception:
+        logger.exception("Post %s publishing failed", post.id)
+        db.rollback()
+        post.status = PostStatus.FAILED
+        db.commit()
+        log_error(
+            db, post.program_id, f"Post {post.id} publishing failed: unexpected error", idea_id=post.idea_id
+        )
+        return post
+
+
 async def publish_post(db: Session, post: Post) -> Post:
     """Pubblica un post generated sull'account Instagram del suo programma.
 
     Unico punto di pubblicazione, usato dalla pipeline e dalla pubblicazione manuale: aggiorna
     stato, container_id, media_id, published_at e permalink e scrive i log del programma.
     Solleva PublishNotAllowed se il post non è generated o publishing (messo così dalla
-    pubblicazione manuale prima di partire); ogni altro errore non viene propagato: il post va a
+    pipeline o dalla pubblicazione manuale prima di partire); ogni altro errore non viene propagato: il post va a
     failed e il dettaglio finisce nei log.
 
     Il post diventa published nello stesso commit del media_id, appena è su Instagram: un errore

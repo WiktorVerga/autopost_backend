@@ -14,7 +14,9 @@ job e i post verrebbero pubblicati più volte.
 """
 
 import asyncio
+import concurrent.futures
 import logging
+from collections.abc import Callable
 import threading
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
@@ -34,7 +36,7 @@ from autopost_server.services.logs import log_error, log_info
 from autopost_server.services.pipeline import (
     GenerationFailed,
     PublishNotAllowed,
-    publish_post,
+    publish_post_safely,
     run_program_pipeline,
 )
 
@@ -132,10 +134,16 @@ class ProgramAlreadyRunning(Exception):
 _running: set[int] = set()
 
 
-async def execute_program(db: Session, program: Program, mode: ProgramMode | None = None) -> Post | None:
+async def execute_program(
+    db: Session,
+    program: Program,
+    mode: ProgramMode | None = None,
+    on_publishing: Callable[[Post], None] | None = None,
+) -> Post | None:
     """Esegue subito la pipeline del programma e aggiorna last_run.
 
-    `mode` sostituisce il modo del programma solo per questa esecuzione.
+    `mode` sostituisce il modo del programma solo per questa esecuzione; `on_publishing` è quella
+    di run_program_pipeline. Il programma resta in esecuzione fino alla fine della pubblicazione.
     Solleva ProgramAlreadyRunning se il programma è già in esecuzione.
     """
     if program.id in _running:
@@ -144,7 +152,7 @@ async def execute_program(db: Session, program: Program, mode: ProgramMode | Non
     try:
         program.last_run = datetime.now(UTC)
         db.commit()
-        return await run_program_pipeline(db, program, mode)
+        return await run_program_pipeline(db, program, mode, on_publishing)
     except GenerationFailed:
         raise  # già registrato dalla pipeline
     except Exception:
@@ -158,13 +166,18 @@ async def execute_program(db: Session, program: Program, mode: ProgramMode | Non
 
 
 async def submit_program_run(program_id: int, mode: ProgramMode | None = None) -> int | None:
-    """Lancia subito il programma sul thread dello scheduler e ne attende la fine.
+    """Lancia subito il programma sul thread dello scheduler e ne attende la fine o l'inizio della
+    pubblicazione, che può durare minuti e prosegue in background.
 
     Da chiamare dalle route: restituisce l'id del post (None se non ci sono idee) e solleva le
-    stesse eccezioni di execute_program. Se il client si disconnette l'esecuzione continua.
+    stesse eccezioni di execute_program finché la pubblicazione non è iniziata; da lì il client
+    segue l'esito leggendo lo stato del post e i log. Se il client si disconnette l'esecuzione
+    continua.
     """
-    future = asyncio.run_coroutine_threadsafe(_run_now(program_id, mode), _loop)
-    return await asyncio.shield(asyncio.wrap_future(future))
+    # risolto dal thread dello scheduler: Future di concurrent.futures è thread-safe
+    result: concurrent.futures.Future[int | None] = concurrent.futures.Future()
+    asyncio.run_coroutine_threadsafe(_run_now(program_id, mode, result), _loop)
+    return await asyncio.shield(asyncio.wrap_future(result))
 
 
 def submit_post_publish(post_id: int) -> None:
@@ -182,17 +195,9 @@ async def _publish_now(post_id: int) -> None:
         if post is None:
             return
         try:
-            # gestisce da sé errori, stato e log
-            await publish_post(db, post)
+            await publish_post_safely(db, post)
         except PublishNotAllowed:
             return  # il post non è più publishing: nessuno stato da sistemare
-        except Exception:
-            # qui arrivano solo errori imprevisti: il post non deve restare publishing
-            logger.exception("Post %s publishing failed", post_id)
-            db.rollback()
-            post.status = PostStatus.FAILED
-            db.commit()
-            log_error(db, post.program_id, f"Post {post_id} publishing failed: unexpected error", idea_id=post.idea_id)
 
 
 def _fail_interrupted_publishing(db: Session) -> None:
@@ -209,13 +214,27 @@ def _fail_interrupted_publishing(db: Session) -> None:
         )
 
 
-async def _run_now(program_id: int, mode: ProgramMode | None) -> int | None:
-    with SessionLocal() as db:
-        program = db.get(Program, program_id)
-        if program is None:
-            return None
-        post = await execute_program(db, program, mode)
-        return post.id if post else None
+async def _run_now(
+    program_id: int, mode: ProgramMode | None, result: concurrent.futures.Future[int | None]
+) -> None:
+    """Esegue il programma e mette in `result` l'id del post appena possibile: a fine pipeline o,
+    se pubblica, quando la pubblicazione inizia."""
+
+    def answer(post: Post | None) -> None:
+        if not result.done():
+            result.set_result(post.id if post else None)
+
+    try:
+        with SessionLocal() as db:
+            program = db.get(Program, program_id)
+            if program is None:
+                answer(None)
+                return
+            answer(await execute_program(db, program, mode, on_publishing=answer))
+    except Exception as e:
+        if not result.done():
+            result.set_exception(e)
+        # altrimenti la risposta è già partita e l'errore è già registrato da execute_program
 
 
 async def run_program(program_id: int) -> None:

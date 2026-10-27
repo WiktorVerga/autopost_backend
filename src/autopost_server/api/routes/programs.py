@@ -134,8 +134,10 @@ async def run_program_now(
 
     Riprende il post non completato del programma, se c'è, altrimenti ne crea uno per la prossima
     idea. Se la generazione del contenuto fallisce il post non viene creato (502); un errore di
-    rendering o pubblicazione invece non è un errore HTTP: il post torna con status failed.
-    In entrambi i casi il dettaglio è nei log del programma.
+    rendering invece non è un errore HTTP: il post torna con status failed.
+    In modo publish la risposta parte quando inizia la pubblicazione, che può durare minuti: il
+    post torna publishing e il client ne segue l'esito rileggendolo finché non diventa published
+    o failed. In ogni caso il dettaglio è nei log del programma.
     """
     program = _get_owned_or_404(db, user, program_id)
     if program.idea_collection_id is None:

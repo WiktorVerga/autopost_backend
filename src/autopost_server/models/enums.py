@@ -9,7 +9,7 @@ class ProgramMode(str, enum.Enum):
 class PostStatus(str, enum.Enum):
     PENDING = "pending"
     GENERATED = "generated"
-    # pubblicazione manuale avviata e in corso in background
+    # pubblicazione (dalla pipeline o manuale) avviata e in corso in background
     PUBLISHING = "publishing"
     PUBLISHED = "published"
     FAILED = "failed"
