@@ -74,5 +74,13 @@ class Settings(BaseSettings):
         url = urlsplit(self.frontend_url)
         return f"{url.scheme}://{url.netloc}"
 
+    @property
+    def frontend_domain(self) -> str | None:
+        """Restituisce il sottodominio del frontend"""
+        if not self.frontend_url:
+            return None
+
+        domain = urlsplit(self.frontend_url)
+        return f"{domain.netloc}"
 
 settings = Settings()

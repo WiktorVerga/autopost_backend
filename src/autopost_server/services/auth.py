@@ -33,6 +33,7 @@ def set_auth_cookie(response: Response, token: str) -> None:
         httponly=True,
         secure=settings.auth_cookie_secure,
         samesite="lax",
+        domain=settings.frontend_domain
     )
 
 
