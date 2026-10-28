@@ -33,6 +33,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Diagnosi OIDC (temporaneo)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const t = await core.getIDToken('sts.amazonaws.com');
+            const c = JSON.parse(Buffer.from(t.split('.')[1], 'base64url').toString());
+            core.info(`sub = ${c.sub}`);
+            core.info(`aud = ${c.aud}`);
+            core.info(`ruolo richiesto = ${process.env.ROLE}`);
+        env:
+          ROLE: ${{ vars.AWS_ROLE_ARN }}
+          
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
