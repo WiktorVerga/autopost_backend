@@ -1,0 +1,4 @@
+api.autopost.wiktorverga.com {
+    encode gzip
+    reverse_proxy backend:8000
+}

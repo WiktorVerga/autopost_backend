@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -46,10 +45,6 @@ app.include_router(instagram_accounts_router)
 app.include_router(programs_router)
 app.include_router(posts_router)
 app.include_router(logs_router)
-
-# immagini delle slide: Instagram le scarica da qui al momento della pubblicazione
-settings.media_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/media", StaticFiles(directory=settings.media_dir), name="media")
 
 
 @app.get("/health")

@@ -27,13 +27,10 @@ from sqlalchemy.orm import Session
 from autopost_server.integrations import instagram
 from autopost_server.models import Idea, Post, Program, Slide
 from autopost_server.models.enums import PostStatus, ProgramMode
-from autopost_server.services.generation import (
-    CarouselContent,
-    generate_carousel,
-    post_dir,
-)
+from autopost_server.services.generation import CarouselContent, generate_carousel
 from autopost_server.services.logs import log_error, log_info, log_success
 from autopost_server.services.rendering import RenderError, render_slides
+from autopost_server.services.storage import presigned_url
 
 logger = logging.getLogger(__name__)
 
@@ -156,9 +153,8 @@ def set_content(post: Post, content: CarouselContent) -> None:
 async def render_post(db: Session, post: Post) -> None:
     """Crea le slide del post a partire da post.content e dal template del carosello.
 
-    Le immagini finiscono in post_dir(post.id) e il rendering le pubblica (R2 o
-    settings.public_base_url): il loro URL va in Slide.public_url, perché Instagram scarica i
-    media da un URL pubblico.
+    Le immagini vengono caricate su S3 e di ogni slide si salva solo la chiave (Slide.storage_key):
+    l'URL da cui Instagram la scarica si genera alla pubblicazione.
     Il post può essere una ripresa di un'esecuzione fallita: le slide già presenti vengono
     sostituite, non aggiunte.
     """
@@ -170,13 +166,13 @@ async def render_post(db: Session, post: Post) -> None:
     content["handle"] = f"@{handle}"
 
     # il browser è lento e bloccante: fuori dall'event loop condiviso con l'API
-    result = await asyncio.to_thread(render_slides, post.id, content, post_dir(post.id))
+    result = await asyncio.to_thread(render_slides, post.id, content)
 
     post.slides.clear()
     # le DELETE prima delle INSERT, altrimenti violano uq_slide_post_position
     db.flush()
     post.slides.extend(
-        Slide(position=s.position, local_path=str(s.path), public_url=s.public_url) for s in result.slides
+        Slide(position=s.position, storage_key=s.storage_key) for s in result.slides
     )
 
     if result.problems:
@@ -231,11 +227,11 @@ async def publish_post(db: Session, post: Post) -> Post:
     # in quel caso non va ripubblicato
     if post.media_id is None:
         try:
-            urls = [slide.public_url for slide in post.slides]
-            if not urls or None in urls:
-                raise instagram.InstagramError(
-                    f"Post {post.id} has slides without a public URL: configure R2 or PUBLIC_BASE_URL"
-                )
+            if not post.slides:
+                raise instagram.InstagramError(f"Post {post.id} has no rendered slides")
+            # generati ora, subito prima dei container: Instagram scarica le immagini mentre li
+            # crea e gli URL scadono dopo settings.s3_presigned_url_expires secondi
+            urls = [presigned_url(slide.storage_key) for slide in post.slides]
             post.container_id = await instagram.create_post_container(
                 account.ig_user_id, account.access_token, urls, post.caption
             )

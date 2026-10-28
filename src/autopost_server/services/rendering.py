@@ -4,8 +4,8 @@ Il template public/template/carousel.html disegna le slide con il proprio JavaSc
 dal blocco <script id="data">: qui lo si riempie con il contenuto del post, lo si apre in
 Chromium (Playwright) e si cattura ogni elemento .slide come immagine 1080 × 1350.
 
-Finito il rendering ogni immagine viene pubblicata (services/storage.py: Cloudflare R2 o, senza
-R2, il server stesso sotto /media), perché Instagram scarica i media da un URL pubblico.
+Le immagini vengono scritte in una cartella temporanea e caricate su S3 (services/storage.py):
+sul server non resta nulla, del rendering si conservano solo le chiavi S3 delle slide.
 """
 
 import json
@@ -36,8 +36,7 @@ class RenderError(Exception):
 @dataclass
 class RenderedSlide:
     position: int
-    path: Path
-    public_url: str | None
+    storage_key: str
 
 
 @dataclass
@@ -80,8 +79,8 @@ def _fill_template(content: dict) -> str:
     return html.replace('data-mode="preview"', 'data-mode="render"', 1)
 
 
-def render_slides(post_id: int, content: dict, out_dir: Path) -> RenderResult:
-    """Salva in out_dir un JPEG per slide (slide-00.jpg, slide-01.jpg, ...) e lo pubblica.
+def render_slides(post_id: int, content: dict) -> RenderResult:
+    """Crea un JPEG per slide e lo carica su S3 (posts/<post_id>/slide-1.jpg, slide-2.jpg, ...).
 
     Sincrona e lenta (avvia un browser e carica le immagini): dal codice asincrono va chiamata
     con asyncio.to_thread.
@@ -90,11 +89,11 @@ def render_slides(post_id: int, content: dict, out_dir: Path) -> RenderResult:
     if expected == 0:
         raise RenderError("The post content has no slides")
 
-    out_dir.mkdir(parents=True, exist_ok=True)
-    # immagini di un rendering precedente, che potrebbe aver avuto più slide
-    for old in out_dir.glob("slide-*.jpg"):
-        old.unlink()
+    with tempfile.TemporaryDirectory(prefix="autopost-render-") as tmp:
+        return _render_and_upload(post_id, content, expected, Path(tmp))
 
+
+def _render_and_upload(post_id: int, content: dict, expected: int, out_dir: Path) -> RenderResult:
     # il file sta accanto al template perché i percorsi relativi (font) si risolvano uguali
     with tempfile.NamedTemporaryFile(
         "w", encoding="utf-8", suffix=".html", prefix=".render-", dir=TEMPLATE.parent, delete=False
@@ -130,7 +129,7 @@ def render_slides(post_id: int, content: dict, out_dir: Path) -> RenderResult:
         page_path.unlink(missing_ok=True)
 
     # a browser chiuso; le slide vecchie si eliminano solo dopo aver caricato le nuove
-    slides = [RenderedSlide(i, path, upload_slide(post_id, path)) for i, path in enumerate(paths)]
-    delete_old_slides(post_id, paths)
+    slides = [RenderedSlide(i, upload_slide(post_id, i, path)) for i, path in enumerate(paths)]
+    delete_old_slides(post_id, [s.storage_key for s in slides])
 
     return RenderResult(slides=slides, problems=list(report.get("problems") or []))

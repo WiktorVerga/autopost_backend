@@ -5,7 +5,7 @@ Lo stato e i dati di pubblicazione li gestisce la pipeline: il client crea post 
 ritoccarne la caption finché non sono pubblicati.
 """
 
-from pathlib import Path
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import exists, select, update
@@ -18,11 +18,9 @@ from autopost_server.models.enums import PostStatus
 from autopost_server.scheduler import submit_post_publish
 from autopost_server.schemas.post import PostCreate, PostRead, PostUpdate, PostContentRead
 from autopost_server.services.auth import get_current_user
-from autopost_server.services.storage import (
-    StorageError,
-    delete_old_slides,
-    upload_slide,
-)
+from autopost_server.services.storage import StorageError, delete_old_slides
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -129,37 +127,6 @@ def update_post(
     return post
 
 
-@router.post("/{post_id}/upload-slides", response_model=PostRead)
-def upload_post_slides(
-    post_id: int,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Ricarica le slide già renderizzate del post e ne aggiorna public_url.
-
-    Serve a provare l'upload senza rendering né generazione: lo stato del post non conta.
-    """
-    post = _get_owned_or_404(db, user, post_id)
-    if not post.slides:
-        raise HTTPException(status.HTTP_409_CONFLICT, "The post has no rendered slides")
-    paths = [Path(slide.local_path) for slide in post.slides]
-    missing = [path.name for path in paths if not path.is_file()]
-    if missing:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, f"Slide files not found: {', '.join(missing)}"
-        )
-
-    try:
-        for slide, path in zip(post.slides, paths, strict=True):
-            slide.public_url = upload_slide(post.id, path)
-        delete_old_slides(post.id, paths)
-    except StorageError as e:
-        db.rollback()
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e)) from e
-    db.commit()
-    db.refresh(post)
-    return post
-
 @router.post("/{post_id}/publish", response_model=PostRead, status_code=status.HTTP_202_ACCEPTED)
 def publish_post_manually(
     post_id: int,
@@ -199,8 +166,15 @@ def delete_post(
 ):
     post = _get_owned_or_404(db, user, post_id)
     _check_not_published(post)
+    had_slides = bool(post.slides)
     db.delete(post)  # le slide vengono eliminate a cascata
     db.commit()
+    if had_slides:
+        # le immagini su S3 non servono più; se la cancellazione fallisce restano solo orfane
+        try:
+            delete_old_slides(post_id, [])
+        except StorageError:
+            logger.exception("Deleting the S3 slides of post %s failed", post_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @router.get("/{post_id}/contents", response_model=PostContentRead)

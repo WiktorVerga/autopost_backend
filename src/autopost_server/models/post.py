@@ -47,8 +47,9 @@ class Slide(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     position: Mapped[int]
-    local_path: Mapped[str] = mapped_column(String(500))
-    public_url: Mapped[str | None] = mapped_column(String(1000))
+    # chiave dell'immagine nel bucket S3 (es. posts/123/slide-1.jpg): l'URL per scaricarla si
+    # genera quando serve, pre-firmato (services/storage.py)
+    storage_key: Mapped[str] = mapped_column(String(500))
     post_id: Mapped[int] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"))
 
     post: Mapped["Post"] = relationship(back_populates="slides")

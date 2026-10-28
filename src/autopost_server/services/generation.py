@@ -8,12 +8,10 @@ base all'idea. Le docstring e le description dei modelli finiscono nello schema 
 strutturato, quindi sono istruzioni per Claude: vanno scritte in inglese.
 """
 
-from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from autopost_server.config import settings
 from autopost_server.integrations.claude import generate_structured
 from autopost_server.models import Idea
 from autopost_server.models.brand import Brand
@@ -249,7 +247,3 @@ def _build_prompt(idea: Idea, brand: Brand | None = None) -> str:
 async def generate_carousel(idea: Idea, brand: Brand | None = None) -> CarouselContent:
     content = await generate_structured(_SYSTEM_PROMPT, _build_prompt(idea, brand), CarouselContent)
     return content
-
-
-def post_dir(post_id: int) -> Path:
-    return settings.media_dir / "posts" / str(post_id)

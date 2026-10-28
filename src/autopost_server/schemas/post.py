@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field
 
 from autopost_server.models.enums import PostStatus
+from autopost_server.services.storage import StorageError, presigned_url
 
 
 class PostBase(BaseModel):
@@ -27,7 +28,16 @@ class SlideRead(BaseModel):
 
     id: int
     position: int
-    public_url: str | None
+    storage_key: str
+
+    @computed_field
+    @property
+    def url(self) -> str | None:
+        """URL pre-firmato e temporaneo per visualizzare la slide; None se S3 non è configurato."""
+        try:
+            return presigned_url(self.storage_key)
+        except StorageError:
+            return None
 
 
 class PostRead(PostBase):

@@ -11,6 +11,11 @@ wheels/
 
 # Segreti
 .env
+.env.example
+.env.prod
 
 # File generati per i post (carousel.json, slide)
 media/
+
+#.env da deploy/
+deploy/.env
