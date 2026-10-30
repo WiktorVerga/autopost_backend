@@ -28,7 +28,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Autopost Server", lifespan=lifespan)
 
 # serve ad Authlib per conservare state/nonce tra /auth/google/login e il callback
-app.add_middleware(SessionMiddleware, secret_key=settings.session_secret_key.get_secret_value())
+# nome dedicato per non scontrarsi con un eventuale cookie "session" del frontend; il dominio del
+# frontend lo rende visibile anche al sottodominio api.* se il login parte da autopost.*
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.session_secret_key.get_secret_value(),
+    session_cookie="autopost_oauth",
+    max_age=600,
+    same_site="lax",
+    https_only=settings.auth_cookie_secure,
+)
 # il frontend chiama l'API da un'altra origine con credentials: "include" per inviare il cookie
 if settings.frontend_origin:
     app.add_middleware(

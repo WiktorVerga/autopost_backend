@@ -39,7 +39,11 @@ def set_auth_cookie(response: Response, token: str) -> None:
 
 def clear_auth_cookie(response: Response) -> None:
     response.delete_cookie(
-        settings.auth_cookie_name, httponly=True, secure=settings.auth_cookie_secure, samesite="lax"
+        settings.auth_cookie_name,
+        httponly=True,
+        secure=settings.auth_cookie_secure,
+        samesite="lax",
+        domain=settings.frontend_domain,
     )
 
 

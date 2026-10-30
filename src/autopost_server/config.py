@@ -80,7 +80,11 @@ class Settings(BaseSettings):
         if not self.frontend_url:
             return None
 
-        domain = urlsplit(self.frontend_url)
-        return f"{domain.netloc}"
+        # solo l'host: un Domain con la porta viene scartato, e su localhost i cookie restano
+        # legati all'host senza bisogno di Domain
+        host = urlsplit(self.frontend_url).hostname
+        if not host or host == "localhost":
+            return None
+        return host
 
 settings = Settings()
