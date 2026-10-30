@@ -37,6 +37,7 @@ app.add_middleware(
     max_age=600,
     same_site="lax",
     https_only=settings.auth_cookie_secure,
+    domain=settings.frontend_domain,
 )
 # il frontend chiama l'API da un'altra origine con credentials: "include" per inviare il cookie
 if settings.frontend_origin:
