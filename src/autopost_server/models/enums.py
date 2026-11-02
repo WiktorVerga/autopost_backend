@@ -19,3 +19,7 @@ class LogStatus(str, enum.Enum):
     INFO = "info"
     SUCCESS = "success"
     ERROR = "error"
+
+class TemplateFormat(str, enum.Enum):
+    CAROUSEL = "carousel"
+    REEL     = "reel"

@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Self
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from apscheduler.triggers.cron import CronTrigger
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
 from autopost_server.models.enums import ProgramMode
 
@@ -65,3 +65,11 @@ class ProgramRead(ProgramBase):
     # gestiti dallo scheduler, non modificabili dal client
     last_run: datetime | None
     next_run: datetime | None
+
+    @model_validator(mode="after")
+    def _to_program_timezone(self) -> Self:
+        # nel DB sono istanti assoluti: il client li riceve con ora e offset del fuso del programma
+        tz = ZoneInfo(self.timezone)
+        self.last_run = self.last_run and self.last_run.astimezone(tz)
+        self.next_run = self.next_run and self.next_run.astimezone(tz)
+        return self

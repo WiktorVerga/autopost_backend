@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     # opzionali: se vuote boto3 usa la propria catena di credenziali (~/.aws, ruolo IAM...)
     aws_access_key_id: str | None = None
     aws_secret_access_key: SecretStr | None = None
+    # profilo di ~/.aws da usare in sviluppo; ignorato se sono impostate le chiavi qui sopra
+    aws_profile: str | None = None
 
     # --- Sessione e JWT ---
     # firma il cookie di sessione usato solo durante il giro OAuth (state, nonce)

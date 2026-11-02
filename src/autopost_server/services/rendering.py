@@ -13,8 +13,10 @@ import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 from playwright.sync_api import Playwright, sync_playwright
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from autopost_server.config import settings
 from autopost_server.services.storage import delete_old_slides, upload_slide
@@ -46,18 +48,20 @@ class RenderResult:
     problems: list[str]
 
 
-def _launch_browser(p: Playwright):
+def _launch_browser(p: Playwright, args: list[str] | None = None):
     """Prova il Chromium di Playwright, poi Chrome di sistema, poi settings.chrome_path."""
     attempts = [
-        lambda: p.chromium.launch(),
-        lambda: p.chromium.launch(channel="chrome"),
-        lambda: p.chromium.launch(channel="msedge"),
+        lambda: p.chromium.launch(args=args),
+        lambda: p.chromium.launch(channel="chrome", args=args),
+        lambda: p.chromium.launch(channel="msedge", args=args),
     ]
     for name in (settings.chrome_path, "google-chrome", "chromium", "chromium-browser"):
         if name:
             path = shutil.which(name) or (name if Path(name).exists() else None)
             if path:
-                attempts.append(lambda path=path: p.chromium.launch(executable_path=path))
+                attempts.append(
+                    lambda path=path: p.chromium.launch(executable_path=path, args=args)
+                )
     last = None
     for attempt in attempts:
         try:
@@ -133,3 +137,95 @@ def _render_and_upload(post_id: int, content: dict, expected: int, out_dir: Path
     delete_old_slides(post_id, [s.storage_key for s in slides])
 
     return RenderResult(slides=slides, problems=list(report.get("problems") or []))
+
+
+# ── Anteprima di un template caricato da un utente ─────────────────────────────────────────
+
+# origine fittizia: ogni richiesta della pagina passa da _sandbox_route, nessuna va in rete
+_SANDBOX_ORIGIN = "http://template.invalid"
+_SANDBOX_PAGE = f"{_SANDBOX_ORIGIN}/index.html"
+# file serviti alla pagina (i font condivisi), come i percorsi relativi di carousel.html
+_ASSETS_DIR = TEMPLATE.parent.resolve()
+# ciò che sfugge al routing (WebSocket, richieste del browser) finisce su un proxy inesistente
+_SANDBOX_ARGS = ["--proxy-server=http://127.0.0.1:9", "--proxy-bypass-list=<-loopback>"]
+_MAX_PREVIEW_SLIDES = 20
+
+
+class PreviewError(RenderError):
+    """Il rendering è fallito per colpa del template (non del server)."""
+
+
+@dataclass
+class RenderedPreview:
+    images: list[bytes]  # JPEG, una per slide (o una sola della pagina se non ci sono .slide)
+    problems: list[str]
+
+
+def _sandbox_route(html: str):
+    def handle(route):
+        url = route.request.url
+        if url == _SANDBOX_PAGE:
+            route.fulfill(body=html, content_type="text/html; charset=utf-8")
+            return
+        if url.startswith(_SANDBOX_ORIGIN + "/"):
+            relative = unquote(urlsplit(url).path).lstrip("/")
+            path = (_ASSETS_DIR / relative).resolve()
+            if path.is_relative_to(_ASSETS_DIR) and path.is_file() and path.suffix != ".html":
+                route.fulfill(path=path)
+                return
+        route.abort()
+
+    return handle
+
+
+def render_preview(html: str, width: int, height: int) -> RenderedPreview:
+    """Disegna un HTML non fidato e ne cattura le slide (o la pagina) come JPEG, in memoria.
+
+    La pagina non può raggiungere la rete né il filesystem: le sole risorse servite sono i
+    file di public/template (i font). Sincrona e lenta: dal codice asincrono va chiamata con
+    asyncio.to_thread.
+    """
+    page_errors: list[str] = []
+    with sync_playwright() as p:
+        browser = _launch_browser(p, args=_SANDBOX_ARGS)
+        try:
+            context = browser.new_context(
+                viewport={"width": width, "height": height},
+                service_workers="block",
+                accept_downloads=False,
+            )
+            context.route("**/*", _sandbox_route(html))
+            context.route_web_socket("**/*", lambda ws: ws.close())
+            page = context.new_page()
+            page.on("pageerror", lambda e: page_errors.append(f"JavaScript error: {e}"))
+            page.set_default_timeout(_READY_TIMEOUT_MS)
+
+            try:
+                page.goto(_SANDBOX_PAGE, wait_until="load")
+                if "ready" in html:
+                    # i template come carousel.html segnalano la fine del disegno con data-ready
+                    page.wait_for_selector("html[data-ready='1']", state="attached")
+                else:
+                    page.evaluate("document.fonts.ready.then(() => true)")
+            except PlaywrightTimeoutError as e:
+                reasons = ["The template did not finish rendering in time", *page_errors]
+                raise PreviewError("; ".join(reasons)) from e
+
+            report = page.evaluate("window.__REPORT || {}") or {}
+            problems = [str(x) for x in (report.get("problems") or [])] + page_errors
+
+            slides = page.locator(".slide")
+            count = slides.count()
+            if count > _MAX_PREVIEW_SLIDES:
+                raise PreviewError(f"The template renders {count} slides, max {_MAX_PREVIEW_SLIDES}")
+            if count:
+                images = [
+                    slides.nth(i).screenshot(type="jpeg", quality=_JPEG_QUALITY)
+                    for i in range(count)
+                ]
+            else:
+                images = [page.screenshot(type="jpeg", quality=_JPEG_QUALITY)]
+        finally:
+            browser.close()
+
+    return RenderedPreview(images=images, problems=problems)
