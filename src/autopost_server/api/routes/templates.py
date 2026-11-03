@@ -7,6 +7,7 @@ Il client invia solo la definizione JSON; il server la valida contro lo schema d
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -72,14 +73,18 @@ def list_base_templates(user: User = Depends(get_current_user)):
     ]
 
 
+def _base_or_404(key: str) -> BaseTemplate:
+    try:
+        return BaseTemplate.from_key(key)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e)) from e
+
+
 @router.get("/bases/{key}", response_model=BaseTemplateDetail)
 def get_base_template(key: str, user: User = Depends(get_current_user)):
     """Lo schema della definizione (struttura, valori ammessi e default per l'editor del client)
     e l'anteprima della base in base64."""
-    try:
-        base = BaseTemplate.from_key(key)
-    except ValueError as e:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e)) from e
+    base = _base_or_404(key)
     files = _load_base_or_500(base)
     return BaseTemplateDetail(
         key=base.key,
@@ -87,6 +92,18 @@ def get_base_template(key: str, user: User = Depends(get_current_user)):
         preview_image=files.preview_image,
         json_schema=files.schema,
     )
+
+
+@router.get(
+    "/bases/{key}/html",
+    response_class=HTMLResponse,
+    responses={200: {"content": {"text/html": {}}, "description": "HTML of the base template"}},
+)
+def get_base_template_html(key: str, user: User = Depends(get_current_user)):
+    """L'HTML della base così com'è nel server (con i segnaposto del contratto e i dati
+    d'esempio), per l'anteprima nell'editor del frontend."""
+    base = _base_or_404(key)
+    return HTMLResponse(_load_base_or_500(base).html)
 
 
 # ── template degli utenti ─────────────────────────────────────────────────────────────────
