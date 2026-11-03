@@ -187,16 +187,24 @@ def load_base(base: BaseTemplate) -> BaseFiles:
 def _base_of(definition: dict) -> BaseTemplate:
     key = definition.get("base_template")
     if not isinstance(key, str):
-        raise TemplateValidationError(["base_template: required string"])
+        raise TemplateValidationError(["definition_json.base_template: required string"])
     try:
         return BaseTemplate.from_key(key)
     except ValueError as e:
-        raise TemplateValidationError([f"base_template: {e}"]) from e
+        raise TemplateValidationError([f"definition_json.base_template: {e}"]) from e
 
 
-def validate_definition(definition: dict) -> BaseFiles:
-    """Controlla la definizione contro lo schema della sua base; restituisce la base."""
-    base = load_base(_base_of(definition))
+def validate_definition(definition: dict, expected: BaseTemplate) -> BaseFiles:
+    """Controlla che la definizione sia per la base `expected` (quella scelta dal client) e la
+    valida contro lo schema di quella base; restituisce i file della base."""
+    declared = _base_of(definition)
+    if declared is not expected:
+        message = (
+            f"definition_json.base_template: the definition is for '{declared.key}', "
+            f"but base_template is '{expected.key}'"
+        )
+        raise TemplateValidationError([message])
+    base = load_base(expected)
     validator = Draft202012Validator(base.schema)
     errors = [
         f"{'.'.join(str(p) for p in e.absolute_path) or '(root)'}: {e.message}"
@@ -460,13 +468,13 @@ def _css_vars(config: dict) -> str:
     return "\n:root {\n" + "\n".join(lines) + "\n}\n"
 
 
-def compile_definition(definition: dict) -> CompiledTemplate:
-    """Valida la definizione e genera il template Jinja2 dalla sua base.
+def compile_definition(definition: dict, base_template: BaseTemplate) -> CompiledTemplate:
+    """Valida la definizione e genera il template Jinja2 dalla base `base_template`.
 
     TemplateValidationError se la definizione non è valida (errore del client),
     BaseTemplateError se la base non rispetta il contratto (errore del server).
     """
-    base = validate_definition(definition)
+    base = validate_definition(definition, base_template)
     config = _merge(base.defaults, definition)
     unknown_fonts = {config["fonts"][r] for r in _FONT_VARS} - _GOOGLE_FONTS.keys()
     if unknown_fonts:

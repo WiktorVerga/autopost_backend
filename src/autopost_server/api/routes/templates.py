@@ -43,9 +43,9 @@ def _get_owned_or_404(db: Session, user: User, template_id: int) -> Template:
     return template
 
 
-def _compile(definition: dict) -> CompiledTemplate:
+def _compile(definition: dict, base_template: BaseTemplate) -> CompiledTemplate:
     try:
-        return compile_definition(definition)
+        return compile_definition(definition, base_template)
     except TemplateValidationError as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, {"errors": e.errors}) from e
     except BaseTemplateError as e:
@@ -124,11 +124,12 @@ def create_template(
     db: Session = Depends(get_db),
 ):
     """Valida la definizione, genera il Jinja e salva. 422 con l'elenco dei problemi se la
-    definizione non rispetta lo schema della base."""
-    compiled = _compile(payload.definition_json)
+    definizione non è per base_template o non ne rispetta lo schema."""
+    compiled = _compile(payload.definition_json, payload.base_template)
     template = Template(
         user_id=user.id,
         name=payload.name,
+        description=payload.description,
         base_template=compiled.base_template,
         base_version=compiled.base_version,
         definition_json=payload.definition_json,
@@ -147,15 +148,16 @@ def update_template(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Con definition_json il Jinja viene rigenerato dalla versione attuale della base."""
+    """Con definition_json il Jinja viene rigenerato dalla versione attuale della base.
+    La base (base_template) è quella scelta alla creazione e non si può cambiare."""
     template = _get_owned_or_404(db, user, template_id)
-    changes = payload.model_dump(exclude_unset=True)
-    if changes.get("name") is not None:
-        template.name = changes["name"]
-    if changes.get("definition_json") is not None:
-        compiled = _compile(changes["definition_json"])
-        template.definition_json = changes["definition_json"]
-        template.base_template = compiled.base_template
+    if payload.name is not None:
+        template.name = payload.name
+    if "description" in payload.model_fields_set:
+        template.description = payload.description
+    if payload.definition_json is not None:
+        compiled = _compile(payload.definition_json, template.base_template)
+        template.definition_json = payload.definition_json
         template.base_version = compiled.base_version
         template.jinja_content = compiled.jinja_content
     db.commit()

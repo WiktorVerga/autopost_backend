@@ -40,14 +40,30 @@ DefinitionJson = Annotated[
 
 class TemplateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=1000)
+    base_template: BaseTemplateKey = Field(
+        description="Key of the base the template is created from; must match "
+        "definition_json.base_template"
+    )
     definition_json: DefinitionJson
 
 
 class TemplateUpdate(BaseModel):
-    """Aggiornamento parziale: con una nuova definizione il Jinja viene rigenerato."""
+    """Aggiornamento parziale: con una nuova definizione il Jinja viene rigenerato.
+
+    base_template non c'è: è fissato alla creazione e non cambia. extra="forbid" fa rispondere
+    422 a chi prova a inviarlo, invece di ignorarlo in silenzio.
+    """
+
+    model_config = ConfigDict(extra="forbid")
 
     name: str | None = Field(default=None, min_length=1, max_length=100)
-    definition_json: DefinitionJson | None = None
+    # null cancella la descrizione
+    description: str | None = Field(default=None, max_length=1000)
+    definition_json: DefinitionJson | None = Field(
+        default=None,
+        description="New definition for the template's base: its base_template must match",
+    )
 
 
 class TemplateRead(BaseModel):
@@ -55,6 +71,7 @@ class TemplateRead(BaseModel):
 
     id: int
     name: str
+    description: str | None
     base_template: BaseTemplateKey
     base_version: int
     created_at: datetime
@@ -65,6 +82,7 @@ class TemplateDetail(TemplateRead):
     # solo nel dettaglio: nella lista sarebbero troppo pesanti
     definition_json: dict[str, Any]
     jinja_content: str
+    base_template: BaseTemplateKey
 
 
 class BaseTemplateRead(BaseModel):

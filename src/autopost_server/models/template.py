@@ -17,6 +17,7 @@ class Template(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
     # salvato come testo ("plain"), non come enum PostgreSQL: aggiungere una base all'enum
     # non richiede una migrazione
     base_template: Mapped[BaseTemplate] = mapped_column(
