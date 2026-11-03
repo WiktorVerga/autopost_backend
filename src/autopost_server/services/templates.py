@@ -1,231 +1,500 @@
-"""Template HTML caricati dagli utenti: controllo, trasformazione in template Jinja2, verifica.
+"""Template degli utenti: dalla definizione JSON inviata dal client al template Jinja2.
 
-Un template segue lo stesso contratto di public/template/carousel.html:
-- un documento HTML completo (<!doctype html>, <html>, <head>, <body>) ben formato;
-- un unico blocco <script id="data" type="application/json"> con dei dati d'esempio (un
-  oggetto JSON): è il punto in cui, al rendering, vengono iniettati i contenuti del post;
-- il proprio JavaScript legge quel blocco e disegna gli elementi .slide; facoltativamente
-  imposta <html data-ready="1"> quando ha finito e window.__REPORT.problems con gli avvisi.
+Ogni template di base (models.enums.BaseTemplate) è una coppia di file in public/:
+- <nome>.template.html: l'HTML di base, con i segnaposto del contratto descritto nel file;
+- <nome>.schema.json: il JSON Schema della definizione. È l'unica fonte dei valori di default
+  e, con la costante di "schema_version", della versione della base (salvata in base_version);
+- preview.jpeg: l'anteprima della base, restituita al client in base64.
 
-La trasformazione sostituisce i dati d'esempio con {{ data | tojson }} e l'eventuale
-data-mode dell'<html> con {{ mode }}. Nel resto del file si possono usare espressioni Jinja,
-ma le sole variabili disponibili sono `data` e `mode`.
+La compilazione (compile_definition):
+1. valida la definizione contro lo schema e la completa con i default;
+2. sostituisce <link id="t-fonts"> con il link ai soli Google Fonts scelti e il contenuto di
+   <style id="t-vars"> con le variabili CSS calcolate;
+3. trasforma il <body>: le <section data-type="..."> d'esempio diventano i rami di
+   {% for slide in data.slides %}{% if slide.type == "..." %}, e al loro interno
+   - data-el="gruppo.chiave"  → {% if v.gruppo.chiave %} … {% endif %}
+   - data-field="campo"       → il testo d'esempio diventa {{ slide.campo }}
+   - data-repeat="lista"      → il primo elemento diventa il corpo di {% for … in slide.lista %},
+                                gli altri con lo stesso data-repeat (esempi) vengono scartati.
+   I campi "meta.counter" e "meta.handle" li calcola il template stesso (numero della slide
+   e data.handle). I commenti HTML della base non finiscono nel template.
 
-I template sono scritti dagli utenti: vengono compilati in un ambiente Jinja sandboxed (niente
-accesso agli attributi interni di Python) e disegnati in un browser isolato dalla rete
-(services/rendering.render_preview).
+Il risultato si disegna con render_jinja(jinja_content, data), dove data è il contenuto del post
+({"handle": ..., "slides": [{"type": ..., ...}]}). L'unica variabile di contesto è `data`.
 """
 
+import base64
 import json
 import re
 from dataclasses import dataclass
+from functools import lru_cache
+from html import escape
 from html.parser import HTMLParser
+from pathlib import Path
+from urllib.parse import quote_plus
 
-from jinja2 import StrictUndefined, TemplateError, TemplateSyntaxError, meta
+from jinja2 import ChainableUndefined, TemplateError, meta
 from jinja2.sandbox import ImmutableSandboxedEnvironment
+from jsonschema import Draft202012Validator
 
-from autopost_server.services.rendering import RenderedPreview, render_preview
+from autopost_server.models.enums import BaseTemplate
+from autopost_server.services.rendering import PROJECT_ROOT
 
-MAX_TEMPLATE_BYTES = 2 * 1024 * 1024
+PUBLIC_DIR = PROJECT_ROOT / "public"
 
 # le sole variabili che il rendering passa al template
-CONTEXT_VARIABLES = frozenset({"data", "mode"})
+CONTEXT_VARIABLES = frozenset({"data"})
 
-_env = ImmutableSandboxedEnvironment(autoescape=True, undefined=StrictUndefined)
+# sandbox: i dati dei post non sono fidati. ChainableUndefined: un campo mancante nel contenuto
+# del post produce un testo vuoto (e un ciclo su una lista mancante zero elementi), non un errore
+_env = ImmutableSandboxedEnvironment(autoescape=True, undefined=ChainableUndefined)
 
-_HTML_MODE = re.compile(r"""(<html\b[^>]*?\bdata-mode\s*=\s*)(["'])[^"']*\2""", re.IGNORECASE)
+# Google Fonts ammessi dallo schema: famiglia per l'API css2 (con assi e pesi) e font di riserva
+_GOOGLE_FONTS = {
+    "Inter": ("Inter:wght@400;500;600", "system-ui, sans-serif"),
+    "Space Grotesk": ("Space Grotesk:wght@400;500;600", "system-ui, sans-serif"),
+    "IBM Plex Mono": ("IBM Plex Mono:wght@400;500;600", "ui-monospace, monospace"),
+    "Fraunces": ("Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600", "Georgia, serif"),
+    "Playfair Display": ("Playfair Display:wght@400;500;600", "Georgia, serif"),
+    "DM Serif Display": ("DM Serif Display", "Georgia, serif"),
+}
 
-# elementi senza tag di chiusura
+# definizione → variabili CSS di <style id="t-vars">
+_COLOR_VARS = {
+    "background": "--color-bg",
+    "text": "--color-text",
+    "muted": "--color-muted",
+    "accent": "--color-accent",
+}
+_FONT_VARS = {"heading": "--font-heading", "body": "--font-body"}
+_SIZE_VARS = {
+    "title": "--size-title",
+    "subtitle": "--size-subtitle",
+    "body": "--size-body",
+    "kicker": "--size-kicker",
+    "number": "--size-number",
+    "meta": "--size-meta",
+}
+
 _VOID = frozenset({
     "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param",
     "source", "track", "wbr",
 })
-# elementi il cui tag di chiusura è facoltativo in HTML5
-_OPTIONAL_END = frozenset({
-    "p", "li", "dt", "dd", "tr", "td", "th", "thead", "tbody", "tfoot", "option", "optgroup",
-    "colgroup", "caption", "rb", "rt", "rtc", "rp",
-})
-_REQUIRED = ("html", "head", "body")
+# attributi del contratto: servono solo al compilatore, non finiscono nel template
+_CONTRACT_ATTRS = frozenset({"data-el", "data-field", "data-repeat"})
+_IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_JINJA_OPENERS = ("{{", "{%", "{#")
 
 
 class TemplateValidationError(Exception):
-    """Il file caricato non è un template valido; `errors` elenca i motivi."""
+    """La definizione inviata non è valida; `errors` elenca i motivi."""
 
     def __init__(self, errors: list[str]):
         super().__init__("; ".join(errors))
         self.errors = errors
 
 
+class BaseTemplateError(Exception):
+    """L'HTML o lo schema di una base non rispettano il contratto: errore del server."""
+
+
+@dataclass(frozen=True)
+class BaseFiles:
+    base: BaseTemplate
+    html: str
+    schema: dict
+    version: int
+    defaults: dict
+    # data URL di preview.jpeg: data:image/jpeg;base64,...
+    preview_image: str
+
+
 @dataclass
 class CompiledTemplate:
-    source: str  # il template Jinja2 da salvare
-    sample_data: dict  # i dati d'esempio estratti dal file
-    variables: list[dict]  # descrizione dei campi di primo livello dei dati
+    base_template: BaseTemplate
+    base_version: int
+    jinja_content: str
+
+
+# ── file della base ───────────────────────────────────────────────────────────────────────
+
+
+def _base_path(base: BaseTemplate) -> Path:
+    public = PUBLIC_DIR.resolve()
+    path = (public / base.value).resolve()
+    if not path.is_relative_to(public) or not path.name.endswith(".template.html"):
+        raise BaseTemplateError(f"Invalid path for base template {base.key}: {base.value}")
+    return path
+
+
+def _resolve(node: dict, root: dict) -> dict:
+    """Il nodo con l'eventuale $ref locale ("#/$defs/...") risolto; le chiavi del nodo vincono."""
+    ref = node.get("$ref")
+    if not ref:
+        return node
+    if not ref.startswith("#/"):
+        raise BaseTemplateError(f"Unsupported $ref in schema: {ref}")
+    target = root
+    for part in ref[2:].split("/"):
+        target = target[part]
+    return {**_resolve(target, root), **{k: v for k, v in node.items() if k != "$ref"}}
+
+
+def _defaults(node: dict, root: dict):
+    """I valori di default dichiarati nello schema, come oggetto completo."""
+    node = _resolve(node, root)
+    if "properties" in node:
+        own = node.get("default") or {}
+        return {k: own.get(k, _defaults(v, root)) for k, v in node["properties"].items()}
+    return node.get("default")
+
+
+@lru_cache
+def load_base(base: BaseTemplate) -> BaseFiles:
+    """HTML, schema, versione e default di una base (letti una volta per processo)."""
+    html_path = _base_path(base)
+    schema_name = html_path.name.removesuffix(".template.html") + ".schema.json"
+    schema_path = html_path.with_name(schema_name)
+    html = html_path.read_text(encoding="utf-8")
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+
+    props = schema.get("properties", {})
+    version = props.get("schema_version", {}).get("const")
+    if not isinstance(version, int):
+        raise BaseTemplateError(f"{schema_name}: schema_version must be an integer const")
+    if props.get("base_template", {}).get("const") != base.key:
+        raise BaseTemplateError(f"{schema_name}: base_template const must be '{base.key}'")
+
+    preview_path = html_path.with_name("preview.jpeg")
+    if not preview_path.is_file():
+        raise BaseTemplateError(f"Base template {base.key} has no preview.jpeg")
+    preview_image = "data:image/jpeg;base64," + base64.b64encode(preview_path.read_bytes()).decode()
+
+    return BaseFiles(
+        base=base,
+        html=html,
+        schema=schema,
+        version=version,
+        defaults=_defaults(schema, schema),
+        preview_image=preview_image,
+    )
+
+
+# ── validazione della definizione ─────────────────────────────────────────────────────────
+
+
+def _base_of(definition: dict) -> BaseTemplate:
+    key = definition.get("base_template")
+    if not isinstance(key, str):
+        raise TemplateValidationError(["base_template: required string"])
+    try:
+        return BaseTemplate.from_key(key)
+    except ValueError as e:
+        raise TemplateValidationError([f"base_template: {e}"]) from e
+
+
+def validate_definition(definition: dict) -> BaseFiles:
+    """Controlla la definizione contro lo schema della sua base; restituisce la base."""
+    base = load_base(_base_of(definition))
+    validator = Draft202012Validator(base.schema)
+    errors = [
+        f"{'.'.join(str(p) for p in e.absolute_path) or '(root)'}: {e.message}"
+        for e in sorted(validator.iter_errors(definition), key=lambda e: list(e.absolute_path))
+    ]
+    if errors:
+        raise TemplateValidationError(errors)
+    return base
+
+
+def _merge(defaults, value):
+    """La definizione completata con i default (oggetti uniti ricorsivamente)."""
+    if isinstance(defaults, dict) and isinstance(value, dict):
+        return {k: _merge(defaults.get(k), value.get(k)) for k in defaults.keys() | value.keys()}
+    return defaults if value is None else value
+
+
+# ── albero HTML minimo (html.parser) ──────────────────────────────────────────────────────
 
 
 @dataclass
-class VerifiedTemplate(CompiledTemplate):
-    preview: RenderedPreview
+class _Element:
+    tag: str
+    attrs: list[tuple[str, str | None]]
+    children: list[_Element | str]
+
+    def get(self, name: str) -> str | None:
+        return next((v for k, v in self.attrs if k == name), None)
 
 
-class _WellFormedChecker(HTMLParser):
-    def __init__(self, html: str):
-        super().__init__(convert_charrefs=True)
-        # offset del primo carattere di ogni riga, per passare da getpos() all'indice nel testo
-        self._line_starts = [0]
-        for line in html.split("\n")[:-1]:
-            self._line_starts.append(self._line_starts[-1] + len(line) + 1)
-        # (inizio, fine) del contenuto di ogni <script id="data">; quelli nei commenti non contano
-        self.data_blocks: list[tuple[int, int]] = []
-        self._data_start: int | None = None
-        self.stack: list[tuple[str, int]] = []
-        self.seen: set[str] = set()
-        self.doctype = False
-        self.errors: list[str] = []
+class _TreeBuilder(HTMLParser):
+    """Albero del documento; i testi restano come nel sorgente, i commenti vengono scartati."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=False)
+        self.root = _Element("#document", [], [])
+        self._stack = [self.root]
 
     def handle_decl(self, decl):
-        if decl.lower().startswith("doctype"):
-            self.doctype = True
-
-    def _offset(self) -> int:
-        line, col = self.getpos()
-        return self._line_starts[line - 1] + col
+        self._stack[-1].children.append(f"<!{decl}>")
 
     def handle_starttag(self, tag, attrs):
-        self.seen.add(tag)
-        if tag == "script" and ("id", "data") in attrs:
-            self._data_start = self._offset() + len(self.get_starttag_text())
+        element = _Element(tag, attrs, [])
+        self._stack[-1].children.append(element)
         if tag not in _VOID:
-            self.stack.append((tag, self.getpos()[0]))
+            self._stack.append(element)
 
     def handle_startendtag(self, tag, attrs):
-        # <path/> e simili (SVG): elemento già chiuso
-        self.seen.add(tag)
+        self._stack[-1].children.append(_Element(tag, attrs, []))
 
     def handle_endtag(self, tag):
-        line = self.getpos()[0]
-        if tag == "script" and self._data_start is not None:
-            self.data_blocks.append((self._data_start, self._offset()))
-            self._data_start = None
-        if tag in _VOID:
-            self.errors.append(f"line {line}: </{tag}> is not allowed, <{tag}> has no closing tag")
-            return
-        if not any(open_tag == tag for open_tag, _ in self.stack):
-            self.errors.append(f"line {line}: </{tag}> closes an element that is not open")
-            return
-        while True:
-            open_tag, open_line = self.stack.pop()
-            if open_tag == tag:
-                break
-            if open_tag not in _OPTIONAL_END:
-                self.errors.append(
-                    f"line {open_line}: <{open_tag}> is not closed before </{tag}> at line {line}"
-                )
+        if any(e.tag == tag for e in self._stack[1:]):
+            while self._stack.pop().tag != tag:
+                pass
 
-    def finish(self) -> list[str]:
-        self.close()
-        for tag, line in self.stack:
-            if tag not in _OPTIONAL_END:
-                self.errors.append(f"line {line}: <{tag}> is never closed")
-        if not self.doctype:
-            self.errors.append("missing <!doctype html>: the page would render in quirks mode")
-        for tag in _REQUIRED:
-            if tag not in self.seen:
-                self.errors.append(f"missing <{tag}> element")
-        return self.errors
+    def handle_data(self, data):
+        self._stack[-1].children.append(data)
+
+    def handle_entityref(self, name):
+        self._stack[-1].children.append(f"&{name};")
+
+    def handle_charref(self, name):
+        self._stack[-1].children.append(f"&#{name};")
 
 
-def decode(raw: bytes) -> str:
-    if len(raw) > MAX_TEMPLATE_BYTES:
-        raise TemplateValidationError([f"the file exceeds {MAX_TEMPLATE_BYTES // 1024} KB"])
-    try:
-        return raw.decode("utf-8-sig")
-    except UnicodeDecodeError as e:
-        raise TemplateValidationError([f"the file is not valid UTF-8 (byte {e.start})"]) from e
+def _parse_html(html: str) -> _Element:
+    builder = _TreeBuilder()
+    builder.feed(html)
+    builder.close()
+    return builder.root
 
 
-def check_well_formed(html: str) -> tuple[int, int]:
-    """Primo controllo: struttura HTML bilanciata e blocco dati presente e valido.
+def _find(node: _Element, predicate) -> _Element | None:
+    for child in node.children:
+        if isinstance(child, _Element):
+            if predicate(child):
+                return child
+            found = _find(child, predicate)
+            if found:
+                return found
+    return None
 
-    Restituisce la posizione (inizio, fine) del contenuto del blocco dati.
-    """
-    checker = _WellFormedChecker(html)
-    checker.feed(html)
-    errors = checker.finish()
 
-    blocks = [html[start:end] for start, end in checker.data_blocks]
-    if len(blocks) != 1:
-        errors.append(
-            f'expected exactly one <script id="data" type="application/json"> block, found {len(blocks)}'
-        )
+def _static(text: str) -> str:
+    """Testo del sorgente HTML: se contiene delimitatori Jinja va protetto con {% raw %}."""
+    if any(o in text for o in _JINJA_OPENERS):
+        if "endraw" in text:
+            raise BaseTemplateError("The base HTML contains 'endraw'")
+        return "{% raw %}" + text + "{% endraw %}"
+    return text
+
+
+def _start_tag(element: _Element) -> str:
+    parts = [element.tag]
+    for name, value in element.attrs:
+        if name in _CONTRACT_ATTRS:
+            continue
+        parts.append(name if value is None else f'{name}="{escape(value, quote=True)}"')
+    return "<" + " ".join(parts) + ">"
+
+
+# ── compilazione ──────────────────────────────────────────────────────────────────────────
+
+
+def _path_expr(path: str, loop_vars: list[str]) -> str:
+    """'left.items' → slide["left"]["items"]; 'step.title' (dentro un ciclo) → step["title"];
+    'meta.counter' → meta["counter"]. Sempre con [], perché slide.items sarebbe dict.items."""
+    parts = path.split(".")
+    if not all(_IDENT.match(p) for p in parts):
+        raise BaseTemplateError(f"Invalid path in base template: {path!r}")
+    if parts[0] in loop_vars or parts[0] == "meta":
+        expr, rest = parts[0], parts[1:]
     else:
-        try:
-            sample = json.loads(blocks[0])
-        except json.JSONDecodeError as e:
-            errors.append(f'the <script id="data"> block is not valid JSON: {e}')
+        expr, rest = "slide", parts
+    return expr + "".join(f"[{json.dumps(p)}]" for p in rest)
+
+
+def _loop_var(path: str) -> str:
+    """Nome della variabile del ciclo: 'steps' → step, 'left.items' → item."""
+    last = path.split(".")[-1]
+    return last[:-1] if last.endswith("s") and len(last) > 1 else f"{last}_item"
+
+
+class _Compiler:
+    def __init__(self, visibility: dict, fonts_link: str, css_vars: str):
+        self.visibility = visibility
+        self.fonts_link = fonts_link
+        self.css_vars = css_vars
+
+    @staticmethod
+    def _element(node: _Element, inner: str) -> str:
+        if node.tag in _VOID:
+            return _start_tag(node)
+        return _start_tag(node) + inner + f"</{node.tag}>"
+
+    # ── parte statica del documento: <head> con le sostituzioni ──
+
+    def document(self, root: _Element) -> str:
+        if not _find(root, lambda e: e.tag == "link" and e.get("id") == "t-fonts"):
+            raise BaseTemplateError('The base HTML has no <link id="t-fonts">')
+        if not _find(root, lambda e: e.tag == "style" and e.get("id") == "t-vars"):
+            raise BaseTemplateError('The base HTML has no <style id="t-vars">')
+        if not _find(root, lambda e: e.tag == "body"):
+            raise BaseTemplateError("The base HTML has no <body>")
+        return "".join(self.static(c) for c in root.children)
+
+    def static(self, node) -> str:
+        if isinstance(node, str):
+            return _static(node)
+        if node.tag == "link" and node.get("id") == "t-fonts":
+            return self.fonts_link
+        if node.tag == "style" and node.get("id") == "t-vars":
+            return _start_tag(node) + self.css_vars + "</style>"
+        if node.tag == "body":
+            return self.body(node)
+        return self._element(node, "".join(self.static(c) for c in node.children))
+
+    # ── <body>: le sezioni d'esempio diventano un ciclo sulle slide del post ──
+
+    def body(self, body: _Element) -> str:
+        sections = [c for c in body.children if isinstance(c, _Element) and c.get("data-type")]
+        if not sections:
+            raise BaseTemplateError('The base HTML has no <section data-type="..."> in <body>')
+        out = [_start_tag(body), "\n{% set v = " + json.dumps(self.visibility) + " %}\n"]
+        loop_emitted = False
+        for child in body.children:
+            if isinstance(child, str):
+                if child.strip():
+                    out.append(_static(child))
+            elif child.get("data-type"):
+                if not loop_emitted:
+                    out.append(self.slides_loop(sections))
+                    loop_emitted = True
+            else:
+                out.append(self.static(child))
+        out.append("\n</body>")
+        return "".join(out)
+
+    def slides_loop(self, sections: list[_Element]) -> str:
+        # meta: numero della slide e handle, calcolati qui e non chiesti a Claude
+        loop_head = (
+            "{% for slide in data['slides'] %}"
+            "{% set meta = {'counter': '%02d / %02d' | format(loop.index, data['slides'] | length),"
+            " 'handle': data['handle']} %}\n"
+        )
+        out = [loop_head]
+        seen = set()
+        for i, section in enumerate(sections):
+            slide_type = section.get("data-type")
+            if not _IDENT.match(slide_type) or slide_type in seen:
+                raise BaseTemplateError(f"Invalid or duplicated data-type={slide_type!r}")
+            seen.add(slide_type)
+            keyword = "if" if i == 0 else "elif"
+            out.append(f"{{% {keyword} slide['type'] == {json.dumps(slide_type)} %}}\n")
+            out.append(self.slide_node(section, []))
+            out.append("\n")
+        out.append("{% endif %}\n{% endfor %}")
+        return "".join(out)
+
+    def slide_node(self, node, loop_vars: list[str]) -> str:
+        if isinstance(node, str):
+            return _static(node)
+        field = node.get("data-field")
+        if field:
+            inner = "{{ " + _path_expr(field, loop_vars) + " }}"
         else:
-            if not isinstance(sample, dict):
-                errors.append('the <script id="data"> block must contain a JSON object')
+            inner = self.slide_children(node, loop_vars)
+        html = self._element(node, inner)
 
-    if errors:
-        raise TemplateValidationError(errors)
-    return checker.data_blocks[0]
+        el = node.get("data-el")
+        if el:
+            html = "{% if " + self.visibility_expr(el) + " %}" + html + "{% endif %}"
+        return html
+
+    def slide_children(self, node: _Element, loop_vars: list[str]) -> str:
+        out = []
+        repeated: set[str] = set()
+        for child in node.children:
+            source = child.get("data-repeat") if isinstance(child, _Element) else None
+            if source:
+                if source in repeated:
+                    continue  # gli altri elementi d'esempio della stessa lista
+                repeated.add(source)
+                var = _loop_var(source)
+                item = self.slide_node(child, [*loop_vars, var])
+                expr = _path_expr(source, loop_vars)
+                out.append(f"{{% for {var} in {expr} %}}{item}{{% endfor %}}")
+            elif isinstance(child, str) and repeated and not child.strip():
+                continue  # spazi fra gli esempi scartati
+            else:
+                out.append(self.slide_node(child, loop_vars))
+        return "".join(out)
+
+    def visibility_expr(self, path: str) -> str:
+        """data-el="cover.subtitle" → v["cover"]["subtitle"], solo se la chiave è nello schema."""
+        node = self.visibility
+        for part in path.split("."):
+            if not _IDENT.match(part) or not isinstance(node, dict) or part not in node:
+                raise BaseTemplateError(f"data-el={path!r} has no matching key in the schema")
+            node = node[part]
+        if not isinstance(node, bool):
+            raise BaseTemplateError(f"data-el={path!r} is not a boolean in the schema")
+        return "v" + "".join(f"[{json.dumps(p)}]" for p in path.split("."))
 
 
-def _json_type(value) -> str:
-    match value:
-        case bool():
-            return "boolean"
-        case int() | float():
-            return "number"
-        case str():
-            return "string"
-        case list():
-            return "array"
-        case dict():
-            return "object"
-        case _:
-            return "null"
+def _fonts_link(fonts: dict) -> str:
+    # un font scelto per titoli e testo si carica una volta sola
+    names = dict.fromkeys(fonts[role] for role in _FONT_VARS)
+    families = ["family=" + quote_plus(_GOOGLE_FONTS[n][0], safe=":,;@.") for n in names]
+    href = "https://fonts.googleapis.com/css2?" + "&".join(families) + "&display=swap"
+    return f'<link id="t-fonts" rel="stylesheet" href="{escape(href, quote=True)}">'
 
 
-def to_jinja(html: str, data_span: tuple[int, int]) -> CompiledTemplate:
-    """Trasforma l'HTML (già controllato) in template Jinja2 e verifica che compili."""
-    start, end = data_span
-    sample = json.loads(html[start:end])
-    before = _HTML_MODE.sub(r"\1\2{{ mode }}\2", html[:start], count=1)
-    source = before + "\n{{ data | tojson }}\n" + html[end:]
+def _css_vars(config: dict) -> str:
+    # valori già validati dallo schema: colori esadecimali, font da elenco chiuso, interi
+    lines = [f"  {var}: {config['colors'][key]};" for key, var in _COLOR_VARS.items()]
+    for key, var in _FONT_VARS.items():
+        name = config["fonts"][key]
+        lines.append(f"  {var}: '{name}', {_GOOGLE_FONTS[name][1]};")
+    lines += [f"  {var}: {int(config['sizes'][key])}px;" for key, var in _SIZE_VARS.items()]
+    return "\n:root {\n" + "\n".join(lines) + "\n}\n"
+
+
+def compile_definition(definition: dict) -> CompiledTemplate:
+    """Valida la definizione e genera il template Jinja2 dalla sua base.
+
+    TemplateValidationError se la definizione non è valida (errore del client),
+    BaseTemplateError se la base non rispetta il contratto (errore del server).
+    """
+    base = validate_definition(definition)
+    config = _merge(base.defaults, definition)
+    unknown_fonts = {config["fonts"][r] for r in _FONT_VARS} - _GOOGLE_FONTS.keys()
+    if unknown_fonts:
+        raise BaseTemplateError(f"Fonts allowed by the schema but not configured: {unknown_fonts}")
+
+    compiler = _Compiler(
+        visibility=config["visibility"],
+        fonts_link=_fonts_link(config["fonts"]),
+        css_vars=_css_vars(config),
+    )
+    source = compiler.document(_parse_html(base.html))
 
     try:
         ast = _env.parse(source)
-    except TemplateSyntaxError as e:
-        raise TemplateValidationError([f"line {e.lineno}: Jinja syntax error: {e.message}"]) from e
+    except TemplateError as e:
+        raise BaseTemplateError(f"Generated template does not compile: {e}") from e
     unknown = meta.find_undeclared_variables(ast) - CONTEXT_VARIABLES
     if unknown:
-        names = ", ".join(sorted(unknown))
-        raise TemplateValidationError(
-            [f"unknown template variables: {names} (only 'data' and 'mode' are available)"]
-        )
+        raise BaseTemplateError(f"Generated template uses unknown variables: {sorted(unknown)}")
 
-    variables = [{"name": k, "type": _json_type(v), "example": v} for k, v in sample.items()]
-    return CompiledTemplate(source=source, sample_data=sample, variables=variables)
+    return CompiledTemplate(
+        base_template=base.base, base_version=base.version, jinja_content=source
+    )
 
 
-def render_source(source: str, data: dict, mode: str = "render") -> str:
-    """Il template Jinja con i dati di un post: l'HTML pronto per il browser."""
+def render_jinja(jinja_content: str, data: dict) -> str:
+    """Il template salvato con il contenuto di un post: l'HTML pronto per il browser."""
     try:
-        return _env.from_string(source).render(data=data, mode=mode)
+        return _env.from_string(jinja_content).render(data=data)
     except TemplateError as e:
         raise TemplateValidationError([f"Jinja rendering failed: {e}"]) from e
-
-
-def verify(raw: bytes, width: int, height: int) -> VerifiedTemplate:
-    """Controllo, trasformazione e rendering di prova con i dati d'esempio del file.
-
-    Sincrona e lenta (avvia un browser): dal codice asincrono va chiamata con asyncio.to_thread.
-    """
-    html = decode(raw)
-    data_span = check_well_formed(html)
-    compiled = to_jinja(html, data_span)
-    rendered_html = render_source(compiled.source, compiled.sample_data)
-    preview = render_preview(rendered_html, width, height)
-    return VerifiedTemplate(**vars(compiled), preview=preview)
