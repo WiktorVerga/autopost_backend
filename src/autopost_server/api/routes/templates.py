@@ -8,11 +8,11 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import HTMLResponse
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
 
 from autopost_server.db import get_db
-from autopost_server.models import Template, User
+from autopost_server.models import Program, Template, User
 from autopost_server.models.enums import BaseTemplate
 from autopost_server.schemas.template import (
     BaseTemplateDetail,
@@ -189,6 +189,12 @@ def delete_template(
     db: Session = Depends(get_db),
 ):
     template = _get_owned_or_404(db, user, template_id)
+    # programs.template_id va a NULL, ma un programma attivo deve averne uno
+    in_use = db.scalar(
+        select(exists().where(Program.template_id == template.id, Program.is_active))
+    )
+    if in_use:
+        raise HTTPException(status.HTTP_409_CONFLICT, "The template is used by an active program")
     db.delete(template)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

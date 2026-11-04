@@ -39,3 +39,4 @@ class Template(Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="templates")
+    programs: Mapped[list["Program"]] = relationship(back_populates="template")

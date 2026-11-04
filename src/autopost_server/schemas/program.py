@@ -34,6 +34,7 @@ class ProgramBase(BaseModel):
     is_active: bool = False
     instagram_account_id: int
     idea_collection_id: int | None = None
+    template_id: int | None = None
 
 
 class ProgramCreate(ProgramBase):
@@ -44,6 +45,8 @@ class ProgramCreate(ProgramBase):
     mode: ProgramMode = ProgramMode.PREVIEW
     timezone: Timezone = "Europe/Rome"
     is_active: bool = False
+    # facoltativo, ma senza template il programma non può essere attivo
+    template_id: int | None = None
 
 
 class ProgramUpdate(BaseModel):
@@ -56,6 +59,8 @@ class ProgramUpdate(BaseModel):
     is_active: bool | None = None
     instagram_account_id: int | None = None
     idea_collection_id: int | None = None
+    # null scollega il template (il programma deve essere o diventare non attivo)
+    template_id: int | None = None
 
 
 class ProgramRead(ProgramBase):

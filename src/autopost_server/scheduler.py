@@ -107,7 +107,7 @@ def sync_program(program: Program) -> None:
     """Allinea il job al programma e aggiorna program.next_run; il commit spetta al chiamante."""
     if not scheduler.running:
         return
-    if not program.is_active or program.idea_collection_id is None:
+    if not program.is_active or program.idea_collection_id is None or program.template_id is None:
         unschedule_program(program.id)
         program.next_run = None
         return

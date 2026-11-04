@@ -17,6 +17,11 @@ class Program(Base):
             "NOT is_active OR idea_collection_id IS NOT NULL",
             name="ck_program_active_needs_collection",
         ),
+        # e un template con cui disegnare i post
+        CheckConstraint(
+            "NOT is_active OR template_id IS NOT NULL",
+            name="ck_program_active_needs_template",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -33,9 +38,14 @@ class Program(Base):
     idea_collection_id: Mapped[int | None] = mapped_column(
         ForeignKey("idea_collections.id", ondelete="SET NULL")
     )
+    # un solo template per programma; lo stesso template può servire più programmi
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("templates.id", ondelete="SET NULL"), index=True
+    )
 
     instagram_account: Mapped["InstagramAccount"] = relationship(back_populates="programs")
     idea_collection: Mapped[Optional["IdeaCollection"]] = relationship(back_populates="programs")
+    template: Mapped[Optional["Template"]] = relationship(back_populates="programs")
     posts: Mapped[list["Post"]] = relationship(back_populates="program")
     logs: Mapped[list["Log"]] = relationship(
         back_populates="program", cascade="all, delete-orphan", passive_deletes=True

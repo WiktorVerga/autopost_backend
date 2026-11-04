@@ -1,12 +1,13 @@
 """CRUD dei programmi di pubblicazione. Un programma appartiene all'utente tramite il suo
-account Instagram; la raccolta collegata deve essere dello stesso utente."""
+account Instagram; la raccolta e il template collegati devono essere dello stesso utente.
+Raccolta e template sono facoltativi, ma un programma attivo deve averli entrambi."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
 
 from autopost_server.db import get_db
-from autopost_server.models import IdeaCollection, InstagramAccount, Post, Program, User
+from autopost_server.models import IdeaCollection, InstagramAccount, Post, Program, Template, User
 from autopost_server.models.enums import ProgramMode
 from autopost_server.scheduler import (
     ProgramAlreadyRunning,
@@ -22,7 +23,7 @@ from autopost_server.services.pipeline import GenerationFailed
 router = APIRouter(prefix="/programs", tags=["programs"])
 
 # colonne che accettano un null esplicito in PATCH
-_NULLABLE_FIELDS = {"idea_collection_id"}
+_NULLABLE_FIELDS = {"idea_collection_id", "template_id"}
 
 
 def _get_owned_or_404(db: Session, user: User, program_id: int) -> Program:
@@ -33,7 +34,11 @@ def _get_owned_or_404(db: Session, user: User, program_id: int) -> Program:
 
 
 def _check_references(
-    db: Session, user: User, instagram_account_id: int | None, idea_collection_id: int | None
+    db: Session,
+    user: User,
+    instagram_account_id: int | None,
+    idea_collection_id: int | None,
+    template_id: int | None,
 ) -> None:
     if instagram_account_id is not None:
         account = db.get(InstagramAccount, instagram_account_id)
@@ -43,19 +48,33 @@ def _check_references(
         collection = db.get(IdeaCollection, idea_collection_id)
         if collection is None or collection.user_id != user.id:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Idea collection not found")
+    if template_id is not None:
+        template = db.get(Template, template_id)
+        if template is None or template.user_id != user.id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Template not found")
 
 
-def _check_active_has_collection(is_active: bool, idea_collection_id: int | None) -> None:
-    # anticipa ck_program_active_needs_collection con un errore leggibile
-    if is_active and idea_collection_id is None:
+def _check_active_requirements(
+    is_active: bool, idea_collection_id: int | None, template_id: int | None
+) -> None:
+    # anticipa ck_program_active_needs_collection e ck_program_active_needs_template con un
+    # errore leggibile
+    if not is_active:
+        return
+    if idea_collection_id is None:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT, "An active program must have an idea collection"
+        )
+    if template_id is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "An active program must have a template"
         )
 
 
 @router.get("", response_model=list[ProgramRead])
 def list_programs(
     instagram_account_id: int | None = Query(None, description="Filtra per account Instagram"),
+    template_id: int | None = Query(None, description="Filtra per template"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     user: User = Depends(get_current_user),
@@ -64,6 +83,8 @@ def list_programs(
     stmt = select(Program).join(Program.instagram_account).where(InstagramAccount.user_id == user.id)
     if instagram_account_id is not None:
         stmt = stmt.where(Program.instagram_account_id == instagram_account_id)
+    if template_id is not None:
+        stmt = stmt.where(Program.template_id == template_id)
     stmt = stmt.order_by(Program.id).offset(skip).limit(limit)
     return db.scalars(stmt).all()
 
@@ -83,8 +104,10 @@ def create_program(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _check_references(db, user, payload.instagram_account_id, payload.idea_collection_id)
-    _check_active_has_collection(payload.is_active, payload.idea_collection_id)
+    _check_references(
+        db, user, payload.instagram_account_id, payload.idea_collection_id, payload.template_id
+    )
+    _check_active_requirements(payload.is_active, payload.idea_collection_id, payload.template_id)
     program = Program(**payload.model_dump())
     db.add(program)
     db.flush()  # serve l'id per il job
@@ -107,10 +130,17 @@ def update_program(
     for field, value in changes.items():
         if value is None and field not in _NULLABLE_FIELDS:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"'{field}' cannot be null")
-    _check_references(db, user, changes.get("instagram_account_id"), changes.get("idea_collection_id"))
-    _check_active_has_collection(
+    _check_references(
+        db,
+        user,
+        changes.get("instagram_account_id"),
+        changes.get("idea_collection_id"),
+        changes.get("template_id"),
+    )
+    _check_active_requirements(
         changes.get("is_active", program.is_active),
         changes.get("idea_collection_id", program.idea_collection_id),
+        changes.get("template_id", program.template_id),
     )
     for field, value in changes.items():
         setattr(program, field, value)
