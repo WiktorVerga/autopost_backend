@@ -24,12 +24,14 @@ from autopost_server.schemas.template import (
     TemplateUpdate,
 )
 from autopost_server.services.auth import get_current_user
+from autopost_server.services.rendering import RenderError
 from autopost_server.services.templates import (
     BaseTemplateError,
     CompiledTemplate,
     TemplateValidationError,
     compile_definition,
     load_base,
+    render_template_preview,
 )
 
 logger = logging.getLogger(__name__)
@@ -52,6 +54,16 @@ def _compile(definition: dict, base_template: BaseTemplate) -> CompiledTemplate:
     except BaseTemplateError as e:
         logger.exception("Base template does not respect the contract")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Template generation failed") from e
+
+
+def _preview_or_none(compiled: CompiledTemplate) -> str | None:
+    """L'anteprima del template appena compilato. Se il rendering fallisce il template si salva
+    comunque, senza anteprima: è un'immagine per il frontend, non serve a pubblicare."""
+    try:
+        return render_template_preview(compiled.jinja_content, compiled.base_template)
+    except (TemplateValidationError, BaseTemplateError, RenderError, OSError):
+        logger.exception("Template preview failed")
+        return None
 
 
 def _load_base_or_500(base: BaseTemplate):
@@ -140,8 +152,8 @@ def create_template(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Valida la definizione, genera il Jinja e salva. 422 con l'elenco dei problemi se la
-    definizione non è per base_template o non ne rispetta lo schema."""
+    """Valida la definizione, genera il Jinja e l'anteprima e salva. 422 con l'elenco dei
+    problemi se la definizione non è per base_template o non ne rispetta lo schema."""
     compiled = _compile(payload.definition_json, payload.base_template)
     template = Template(
         user_id=user.id,
@@ -151,6 +163,7 @@ def create_template(
         base_version=compiled.base_version,
         definition_json=payload.definition_json,
         jinja_content=compiled.jinja_content,
+        preview_image=_preview_or_none(compiled),
     )
     db.add(template)
     db.commit()
@@ -165,8 +178,8 @@ def update_template(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Con definition_json il Jinja viene rigenerato dalla versione attuale della base.
-    La base (base_template) è quella scelta alla creazione e non si può cambiare."""
+    """Con definition_json il Jinja (e l'anteprima) viene rigenerato dalla versione attuale
+    della base. La base (base_template) è quella scelta alla creazione e non si può cambiare."""
     template = _get_owned_or_404(db, user, template_id)
     if payload.name is not None:
         template.name = payload.name
@@ -177,6 +190,7 @@ def update_template(
         template.definition_json = payload.definition_json
         template.base_version = compiled.base_version
         template.jinja_content = compiled.jinja_content
+        template.preview_image = _preview_or_none(compiled)
     db.commit()
     db.refresh(template)
     return template

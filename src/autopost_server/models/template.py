@@ -33,6 +33,9 @@ class Template(Base):
     base_version: Mapped[int]
     definition_json: Mapped[dict] = mapped_column(JSONB)
     jinja_content: Mapped[str] = mapped_column(Text)
+    # prima slide con i dati d'esempio della base, come data URL JPEG (data:image/jpeg;base64,...)
+    # generata a ogni nuova definizione; NULL se il rendering è fallito
+    preview_image: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

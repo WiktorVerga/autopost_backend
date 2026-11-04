@@ -21,14 +21,19 @@ La compilazione (compile_definition):
 
 Il risultato si disegna con render_jinja(jinja_content, data), dove data è il contenuto del post
 ({"handle": ..., "slides": [{"type": ..., ...}]}). L'unica variabile di contesto è `data`.
+
+L'anteprima di un template (render_template_preview, salvata in Template.preview_image) è la
+sua prima slide disegnata con i dati d'esempio della base: i testi delle sezioni d'esempio,
+letti dagli stessi attributi data-field / data-repeat che usa il compilatore.
 """
 
 import base64
 import json
 import re
+import threading
 from dataclasses import dataclass
 from functools import lru_cache
-from html import escape
+from html import escape, unescape
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import quote_plus
@@ -38,7 +43,13 @@ from jinja2.sandbox import ImmutableSandboxedEnvironment
 from jsonschema import Draft202012Validator
 
 from autopost_server.models.enums import BaseTemplate
-from autopost_server.services.rendering import PROJECT_ROOT
+from autopost_server.services.rendering import (
+    PROJECT_ROOT,
+    SLIDE_HEIGHT,
+    SLIDE_WIDTH,
+    PreviewError,
+    render_preview,
+)
 
 PUBLIC_DIR = PROJECT_ROOT / "public"
 
@@ -107,6 +118,8 @@ class BaseFiles:
     defaults: dict
     # data URL di preview.jpeg: data:image/jpeg;base64,...
     preview_image: str
+    # contenuto di un post con i testi d'esempio della base, per le anteprime dei template
+    sample_data: dict
 
 
 @dataclass
@@ -178,6 +191,7 @@ def load_base(base: BaseTemplate) -> BaseFiles:
         version=version,
         defaults=_defaults(schema, schema),
         preview_image=preview_image,
+        sample_data=_sample_data(_parse_html(html)),
     )
 
 
@@ -286,6 +300,75 @@ def _find(node: _Element, predicate) -> _Element | None:
             if found:
                 return found
     return None
+
+
+def _text(node: _Element) -> str:
+    """Il testo di un elemento come lo vede il lettore: entità risolte, spazi compattati."""
+    raw = "".join(c if isinstance(c, str) else _text(c) for c in node.children)
+    return " ".join(unescape(raw).split())
+
+
+# ── dati d'esempio della base (per le anteprime) ──────────────────────────────────────────
+
+
+def _set_path(target: dict, parts: list[str], value) -> None:
+    for part in parts[:-1]:
+        target = target.setdefault(part, {})
+    target[parts[-1]] = value
+
+
+def _sample_children(node: _Element, slide: dict, loops: dict[str, dict]) -> None:
+    for child in node.children:
+        if not isinstance(child, _Element):
+            continue
+        source = child.get("data-repeat")
+        if not source:
+            _sample_element(child, slide, loops)
+            continue
+        # ogni elemento d'esempio con lo stesso data-repeat è un elemento della lista
+        parts = source.split(".")
+        owner, parts = (loops[parts[0]], parts[1:]) if parts[0] in loops else (slide, parts)
+        for part in parts[:-1]:
+            owner = owner.setdefault(part, {})
+        items = owner.setdefault(parts[-1], [])
+        var = _loop_var(source)
+        if child.get("data-field") == var:
+            items.append(_text(child))  # lista di testi: <li data-repeat="items" data-field="item">
+        else:
+            item: dict = {}
+            _sample_children(child, slide, {**loops, var: item})
+            items.append(item)
+
+
+def _sample_element(node: _Element, slide: dict, loops: dict[str, dict]) -> None:
+    field = node.get("data-field")
+    if not field:
+        _sample_children(node, slide, loops)
+        return
+    parts = field.split(".")
+    if parts[0] == "meta":
+        return  # counter e handle li calcola il template
+    if parts[0] in loops:
+        if len(parts) > 1:
+            _set_path(loops[parts[0]], parts[1:], _text(node))
+    else:
+        _set_path(slide, parts, _text(node))
+
+
+def _sample_data(root: _Element) -> dict:
+    """Il contenuto di un post ricavato dalle <section data-type> d'esempio della base: una
+    slide per sezione, con i testi d'esempio al posto dei campi data-field."""
+    body = _find(root, lambda e: e.tag == "body")
+    if body is None:
+        raise BaseTemplateError("The base HTML has no <body>")
+    slides = []
+    for section in body.children:
+        if isinstance(section, _Element) and section.get("data-type"):
+            slide = {"type": section.get("data-type")}
+            _sample_children(section, slide, {})
+            slides.append(slide)
+    handle = _find(body, lambda e: e.get("data-field") == "meta.handle")
+    return {"handle": _text(handle) if handle else "@autopost", "slides": slides}
 
 
 def _static(text: str) -> str:
@@ -506,3 +589,24 @@ def render_jinja(jinja_content: str, data: dict) -> str:
         return _env.from_string(jinja_content).render(data=data)
     except TemplateError as e:
         raise TemplateValidationError([f"Jinja rendering failed: {e}"]) from e
+
+
+# ── anteprima ─────────────────────────────────────────────────────────────────────────────
+
+# anteprime contemporanee al massimo: ognuna avvia un browser, le altre aspettano il turno
+_PREVIEW_SLOTS = threading.BoundedSemaphore(2)
+
+
+def render_template_preview(jinja_content: str, base_template: BaseTemplate) -> str:
+    """La prima slide del template disegnata con i dati d'esempio della sua base, come data URL
+    JPEG (data:image/jpeg;base64,...): il valore di Template.preview_image.
+
+    Sincrona e lenta (avvia un browser): dal codice asincrono va chiamata con asyncio.to_thread.
+    TemplateValidationError se il Jinja non si disegna, RenderError se il browser fallisce.
+    """
+    html = render_jinja(jinja_content, load_base(base_template).sample_data)
+    with _PREVIEW_SLOTS:
+        preview = render_preview(html, SLIDE_WIDTH, SLIDE_HEIGHT, max_images=1)
+    if not preview.images:
+        raise PreviewError("The template rendered no image")
+    return "data:image/jpeg;base64," + base64.b64encode(preview.images[0]).decode("ascii")

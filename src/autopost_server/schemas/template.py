@@ -74,6 +74,11 @@ class TemplateRead(BaseModel):
     description: str | None
     base_template: BaseTemplateKey
     base_version: int
+    # anche nella lista: il frontend la mostra nelle card dei template
+    preview_image: str | None = Field(
+        description="First slide with the base's sample texts, as a JPEG data URL "
+        "(data:image/jpeg;base64,...); null if it could not be rendered"
+    )
     created_at: datetime
     updated_at: datetime
 

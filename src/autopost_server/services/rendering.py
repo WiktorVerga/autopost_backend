@@ -149,6 +149,12 @@ _ASSETS_DIR = TEMPLATE.parent.resolve()
 # ciò che sfugge al routing (WebSocket, richieste del browser) finisce su un proxy inesistente
 _SANDBOX_ARGS = ["--proxy-server=http://127.0.0.1:9", "--proxy-bypass-list=<-loopback>"]
 _MAX_PREVIEW_SLIDES = 20
+# le slide dei template: .slide (carousel.html) e .t-slide (basi in public/template/default templates)
+_SLIDE_SELECTOR = ".slide, .t-slide"
+# unica rete concessa: i Google Fonts delle basi, scaricati da Playwright (non dal browser, che
+# ha il proxy inesistente) e serviti alla pagina
+_ALLOWED_FONT_HOSTS = frozenset({"fonts.googleapis.com", "fonts.gstatic.com"})
+_FONT_FETCH_TIMEOUT_MS = 10_000
 
 
 class PreviewError(RenderError):
@@ -173,17 +179,30 @@ def _sandbox_route(html: str):
             if path.is_relative_to(_ASSETS_DIR) and path.is_file() and path.suffix != ".html":
                 route.fulfill(path=path)
                 return
+        parts = urlsplit(url)
+        if (
+            parts.scheme == "https"
+            and parts.hostname in _ALLOWED_FONT_HOSTS
+            and route.request.method == "GET"
+        ):
+            try:
+                route.fulfill(response=route.fetch(timeout=_FONT_FETCH_TIMEOUT_MS))
+            except Exception:  # noqa: BLE001 - senza il font la pagina usa quello di riserva
+                route.abort()
+            return
         route.abort()
 
     return handle
 
 
-def render_preview(html: str, width: int, height: int) -> RenderedPreview:
+def render_preview(
+    html: str, width: int, height: int, max_images: int | None = None
+) -> RenderedPreview:
     """Disegna un HTML non fidato e ne cattura le slide (o la pagina) come JPEG, in memoria.
 
     La pagina non può raggiungere la rete né il filesystem: le sole risorse servite sono i
-    file di public/template (i font). Sincrona e lenta: dal codice asincrono va chiamata con
-    asyncio.to_thread.
+    file di public/template e i Google Fonts. Con max_images si catturano solo le prime
+    max_images slide. Sincrona e lenta: dal codice asincrono va chiamata con asyncio.to_thread.
     """
     page_errors: list[str] = []
     with sync_playwright() as p:
@@ -202,7 +221,8 @@ def render_preview(html: str, width: int, height: int) -> RenderedPreview:
 
             try:
                 page.goto(_SANDBOX_PAGE, wait_until="load")
-                if "ready" in html:
+                # non basta cercare "ready": la parola può comparire nel testo delle slide
+                if "dataset.ready" in html or "data-ready" in html:
                     # i template come carousel.html segnalano la fine del disegno con data-ready
                     page.wait_for_selector("html[data-ready='1']", state="attached")
                 else:
@@ -214,10 +234,12 @@ def render_preview(html: str, width: int, height: int) -> RenderedPreview:
             report = page.evaluate("window.__REPORT || {}") or {}
             problems = [str(x) for x in (report.get("problems") or [])] + page_errors
 
-            slides = page.locator(".slide")
+            slides = page.locator(_SLIDE_SELECTOR)
             count = slides.count()
             if count > _MAX_PREVIEW_SLIDES:
                 raise PreviewError(f"The template renders {count} slides, max {_MAX_PREVIEW_SLIDES}")
+            if max_images is not None:
+                count = min(count, max_images)
             if count:
                 images = [
                     slides.nth(i).screenshot(type="jpeg", quality=_JPEG_QUALITY)
