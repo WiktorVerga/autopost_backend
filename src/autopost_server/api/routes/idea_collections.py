@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
 
+from autopost_server.api.filters import SEARCH_QUERY, text_search
 from autopost_server.db import get_db
 from autopost_server.models import IdeaCollection, Program, User
 from autopost_server.schemas.idea_collection import (
@@ -33,18 +34,16 @@ def _get_owned_or_404(db: Session, user: User, collection_id: int) -> IdeaCollec
 
 @router.get("", response_model=list[IdeaCollectionRead])
 def list_collections(
+    search: str | None = SEARCH_QUERY,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    stmt = (
-        select(IdeaCollection)
-        .where(IdeaCollection.user_id == user.id)
-        .order_by(IdeaCollection.id)
-        .offset(skip)
-        .limit(limit)
-    )
+    stmt = select(IdeaCollection).where(IdeaCollection.user_id == user.id)
+    if (condition := text_search(search, IdeaCollection.name)) is not None:
+        stmt = stmt.where(condition)
+    stmt = stmt.order_by(IdeaCollection.id).offset(skip).limit(limit)
     return db.scalars(stmt).all()
 
 

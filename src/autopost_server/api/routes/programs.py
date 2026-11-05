@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
 
+from autopost_server.api.filters import SEARCH_QUERY, text_search
 from autopost_server.db import get_db
 from autopost_server.models import IdeaCollection, InstagramAccount, Post, Program, Template, User
 from autopost_server.models.enums import ProgramMode
@@ -75,6 +76,10 @@ def _check_active_requirements(
 def list_programs(
     instagram_account_id: int | None = Query(None, description="Filtra per account Instagram"),
     template_id: int | None = Query(None, description="Filtra per template"),
+    idea_collection_id: int | None = Query(None, description="Filtra per raccolta di idee"),
+    is_active: bool | None = Query(None, description="Filtra per programmi attivi o disattivi"),
+    mode: ProgramMode | None = Query(None, description="Filtra per modalità"),
+    search: str | None = SEARCH_QUERY,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     user: User = Depends(get_current_user),
@@ -85,6 +90,14 @@ def list_programs(
         stmt = stmt.where(Program.instagram_account_id == instagram_account_id)
     if template_id is not None:
         stmt = stmt.where(Program.template_id == template_id)
+    if idea_collection_id is not None:
+        stmt = stmt.where(Program.idea_collection_id == idea_collection_id)
+    if is_active is not None:
+        stmt = stmt.where(Program.is_active == is_active)
+    if mode is not None:
+        stmt = stmt.where(Program.mode == mode)
+    if (condition := text_search(search, Program.name)) is not None:
+        stmt = stmt.where(condition)
     stmt = stmt.order_by(Program.id).offset(skip).limit(limit)
     return db.scalars(stmt).all()
 

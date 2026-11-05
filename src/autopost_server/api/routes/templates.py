@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
 
+from autopost_server.api.filters import SEARCH_QUERY, text_search
 from autopost_server.db import get_db
 from autopost_server.models import Program, Template, User
 from autopost_server.models.enums import BaseTemplate
@@ -124,6 +125,7 @@ def get_base_template_html(key: str, user: User = Depends(get_current_user)):
 @router.get("", response_model=list[TemplateRead])
 def list_templates(
     base_template: BaseTemplateKey | None = Query(None, description="Filtra per template di base"),
+    search: str | None = SEARCH_QUERY,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     user: User = Depends(get_current_user),
@@ -132,6 +134,8 @@ def list_templates(
     stmt = select(Template).where(Template.user_id == user.id)
     if base_template is not None:
         stmt = stmt.where(Template.base_template == base_template)
+    if (condition := text_search(search, Template.name, Template.description)) is not None:
+        stmt = stmt.where(condition)
     # i più recenti per primi
     stmt = stmt.order_by(Template.created_at.desc(), Template.id.desc()).offset(skip).limit(limit)
     return db.scalars(stmt).all()

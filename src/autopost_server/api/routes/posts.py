@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import exists, select, update
 from sqlalchemy.orm import Session
 
+from autopost_server.api.filters import text_search
 from autopost_server.api.routes.programs import get_program
 from autopost_server.db import get_db
 from autopost_server.models import Idea, InstagramAccount, Post, Program, User
@@ -57,6 +58,13 @@ def list_posts(
     program_id: int | None = Query(None, description="Filtra per programma"),
     idea_id: int | None = Query(None, description="Filtra per idea"),
     post_status: PostStatus | None = Query(None, alias="status", description="Filtra per stato"),
+    search: str | None = Query(
+        None,
+        min_length=1,
+        max_length=200,
+        description="Ricerca parziale nella caption e nel titolo dell'idea, senza distinzione "
+        "tra maiuscole e minuscole",
+    ),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     user: User = Depends(get_current_user),
@@ -74,6 +82,8 @@ def list_posts(
         stmt = stmt.where(Post.idea_id == idea_id)
     if post_status is not None:
         stmt = stmt.where(Post.status == post_status)
+    if (condition := text_search(search, Post.caption, Idea.title)) is not None:
+        stmt = stmt.join(Post.idea).where(condition)
     # i più recenti per primi
     stmt = stmt.order_by(Post.created_at.desc(), Post.id.desc()).offset(skip).limit(limit)
     return db.scalars(stmt).all()
