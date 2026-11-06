@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from autopost_server.api.filters import SEARCH_QUERY, text_search
 from autopost_server.db import get_db
 from autopost_server.models import IdeaCollection, InstagramAccount, Post, Program, Template, User
-from autopost_server.models.enums import ProgramMode
+from autopost_server.models.enums import ProgramMode, ProgramStatus
 from autopost_server.scheduler import (
     ProgramAlreadyRunning,
     submit_program_run,
@@ -56,11 +56,11 @@ def _check_references(
 
 
 def _check_active_requirements(
-    is_active: bool, idea_collection_id: int | None, template_id: int | None
+    program_status: ProgramStatus, idea_collection_id: int | None, template_id: int | None
 ) -> None:
     # anticipa ck_program_active_needs_collection e ck_program_active_needs_template con un
     # errore leggibile
-    if not is_active:
+    if program_status != ProgramStatus.ACTIVE:
         return
     if idea_collection_id is None:
         raise HTTPException(
@@ -77,7 +77,11 @@ def list_programs(
     instagram_account_id: int | None = Query(None, description="Filtra per account Instagram"),
     template_id: int | None = Query(None, description="Filtra per template"),
     idea_collection_id: int | None = Query(None, description="Filtra per raccolta di idee"),
-    is_active: bool | None = Query(None, description="Filtra per programmi attivi o disattivi"),
+    program_status: list[ProgramStatus] | None = Query(
+        None,
+        alias="status",
+        description="Filtra per stato; ripetibile (?status=active&status=inactive)",
+    ),
     mode: ProgramMode | None = Query(None, description="Filtra per modalità"),
     search: str | None = SEARCH_QUERY,
     skip: int = Query(0, ge=0),
@@ -92,8 +96,8 @@ def list_programs(
         stmt = stmt.where(Program.template_id == template_id)
     if idea_collection_id is not None:
         stmt = stmt.where(Program.idea_collection_id == idea_collection_id)
-    if is_active is not None:
-        stmt = stmt.where(Program.is_active == is_active)
+    if program_status:
+        stmt = stmt.where(Program.status.in_(program_status))
     if mode is not None:
         stmt = stmt.where(Program.mode == mode)
     if (condition := text_search(search, Program.name)) is not None:
@@ -120,7 +124,7 @@ def create_program(
     _check_references(
         db, user, payload.instagram_account_id, payload.idea_collection_id, payload.template_id
     )
-    _check_active_requirements(payload.is_active, payload.idea_collection_id, payload.template_id)
+    _check_active_requirements(payload.status, payload.idea_collection_id, payload.template_id)
     program = Program(**payload.model_dump())
     db.add(program)
     db.flush()  # serve l'id per il job
@@ -151,7 +155,7 @@ def update_program(
         changes.get("template_id"),
     )
     _check_active_requirements(
-        changes.get("is_active", program.is_active),
+        changes.get("status", program.status),
         changes.get("idea_collection_id", program.idea_collection_id),
         changes.get("template_id", program.template_id),
     )
@@ -209,8 +213,11 @@ def delete_program(
     # posts.program_id non ha ondelete: lo storico dei post blocca l'eliminazione
     has_posts = db.scalar(select(exists().where(Post.program_id == program.id)))
     if has_posts:
+        program.status = ProgramStatus.ARCHIVED
+        sync_program(program)  # rimuove il job e azzera next_run
+        db.commit()
         raise HTTPException(
-            status.HTTP_409_CONFLICT, "The program already has posts: deactivate it instead of deleting it"
+            status.HTTP_409_CONFLICT, "The program already has posts: it wan't deleted but archived"
         )
     db.delete(program)  # i log vengono eliminati a cascata
     db.commit()

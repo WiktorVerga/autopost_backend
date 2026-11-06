@@ -6,6 +6,14 @@ class ProgramMode(str, enum.Enum):
     PUBLISH = "publish"
 
 
+class ProgramStatus(str, enum.Enum):
+    # schedulato dal suo cron; richiede raccolta e template
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    # tolto di mezzo ma conservato per lo storico dei post (non eliminabile)
+    ARCHIVED = "archived"
+
+
 class PostStatus(str, enum.Enum):
     PENDING = "pending"
     GENERATED = "generated"

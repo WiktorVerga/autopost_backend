@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from autopost_server.api.filters import SEARCH_QUERY, text_search
 from autopost_server.db import get_db
 from autopost_server.models import Program, Template, User
-from autopost_server.models.enums import BaseTemplate
+from autopost_server.models.enums import BaseTemplate, ProgramStatus
 from autopost_server.schemas.template import (
     BaseTemplateDetail,
     BaseTemplateKey,
@@ -209,7 +209,7 @@ def delete_template(
     template = _get_owned_or_404(db, user, template_id)
     # programs.template_id va a NULL, ma un programma attivo deve averne uno
     in_use = db.scalar(
-        select(exists().where(Program.template_id == template.id, Program.is_active))
+        select(exists().where(Program.template_id == template.id, Program.status == ProgramStatus.ACTIVE))
     )
     if in_use:
         raise HTTPException(status.HTTP_409_CONFLICT, "The template is used by an active program")

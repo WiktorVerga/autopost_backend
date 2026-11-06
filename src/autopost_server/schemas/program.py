@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from apscheduler.triggers.cron import CronTrigger
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
-from autopost_server.models.enums import ProgramMode
+from autopost_server.models.enums import ProgramMode, ProgramStatus
 
 
 def _check_cron(value: str) -> str:
@@ -31,7 +31,7 @@ class ProgramBase(BaseModel):
     mode: ProgramMode = ProgramMode.PREVIEW
     cron_expression: CronExpression
     timezone: Timezone = "Europe/Rome"
-    is_active: bool = False
+    status: ProgramStatus = ProgramStatus.INACTIVE
     instagram_account_id: int
     idea_collection_id: int | None = None
     template_id: int | None = None
@@ -44,7 +44,7 @@ class ProgramCreate(ProgramBase):
     cron_expression: CronExpression
     mode: ProgramMode = ProgramMode.PREVIEW
     timezone: Timezone = "Europe/Rome"
-    is_active: bool = False
+    status: ProgramStatus = ProgramStatus.INACTIVE
     # facoltativo, ma senza template il programma non può essere attivo
     template_id: int | None = None
 
@@ -56,7 +56,7 @@ class ProgramUpdate(BaseModel):
     mode: ProgramMode | None = None
     cron_expression: CronExpression | None = None
     timezone: Timezone | None = None
-    is_active: bool | None = None
+    status: ProgramStatus | None = None
     instagram_account_id: int | None = None
     idea_collection_id: int | None = None
     # null scollega il template (il programma deve essere o diventare non attivo)

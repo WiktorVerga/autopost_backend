@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from autopost_server.db import Base
 from autopost_server.models.column_types import pg_enum
-from autopost_server.models.enums import LogStatus, ProgramMode
+from autopost_server.models.enums import LogStatus, ProgramMode, ProgramStatus
 
 
 class Program(Base):
@@ -14,12 +14,12 @@ class Program(Base):
     __table_args__ = (
         # un programma attivo deve avere una raccolta collegata
         CheckConstraint(
-            "NOT is_active OR idea_collection_id IS NOT NULL",
+            "status <> 'active' OR idea_collection_id IS NOT NULL",
             name="ck_program_active_needs_collection",
         ),
         # e un template con cui disegnare i post
         CheckConstraint(
-            "NOT is_active OR template_id IS NOT NULL",
+            "status <> 'active' OR template_id IS NOT NULL",
             name="ck_program_active_needs_template",
         ),
     )
@@ -31,7 +31,12 @@ class Program(Base):
     )
     cron_expression: Mapped[str] = mapped_column(String(100))
     timezone: Mapped[str] = mapped_column(String(64), default="Europe/Rome")
-    is_active: Mapped[bool] = mapped_column(default=False)
+    status: Mapped[ProgramStatus] = mapped_column(
+        pg_enum(ProgramStatus, "program_status"),
+        default=ProgramStatus.INACTIVE,
+        server_default=ProgramStatus.INACTIVE.value,
+        index=True,
+    )
     last_run: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     next_run: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     instagram_account_id: Mapped[int] = mapped_column(ForeignKey("instagram_accounts.id"))

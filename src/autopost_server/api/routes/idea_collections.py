@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from autopost_server.api.filters import SEARCH_QUERY, text_search
 from autopost_server.db import get_db
 from autopost_server.models import IdeaCollection, Program, User
+from autopost_server.models.enums import ProgramStatus
 from autopost_server.schemas.idea_collection import (
     IdeaCollectionCreate,
     IdeaCollectionRead,
@@ -96,7 +97,7 @@ def delete_collection(
     collection = _get_owned_or_404(db, user, collection_id)
     # programs.idea_collection_id va a NULL, ma un programma attivo deve averne una
     in_use = db.scalar(
-        select(exists().where(Program.idea_collection_id == collection.id, Program.is_active))
+        select(exists().where(Program.idea_collection_id == collection.id, Program.status == ProgramStatus.ACTIVE))
     )
     if in_use:
         raise HTTPException(status.HTTP_409_CONFLICT, "The collection is used by an active program")
