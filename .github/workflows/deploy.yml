@@ -2,7 +2,7 @@ name: Build e deploy backend
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 concurrency: deploy
