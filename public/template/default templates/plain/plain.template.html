@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1080">
+<title>Template plain</title>
+
+<!--
+  BASE TEMPLATE "plain"
+
+  Contract with the compiler (JSON → Jinja):
+  - #t-fonts    → replaced with a link to only the fonts chosen in the JSON
+  - #t-vars     → replaced with the CSS variables computed from defaults + JSON
+  - data-el     → optional element: becomes {% if v.<group>.<key> %} … {% endif %}
+  - data-field  → sample text: becomes the placeholder {{ slide.<field> }}
+  - data-repeat → repeated element: becomes {% for … in slide.<list> %}
+  The values in #t-vars only mirror the defaults in plain.schema.json,
+  which remains the single source of truth for defaults.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="t-fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap">
+
+<style id="t-vars">
+:root {
+  --color-bg: #F4EFE7;
+  --color-text: #1E1A17;
+  --color-muted: #7B7068;
+  --color-accent: #9A6B43;
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --size-title: 96px;
+  --size-subtitle: 44px;
+  --size-body: 40px;
+  --size-kicker: 26px;
+  --size-number: 320px;
+  --size-meta: 26px;
+}
+</style>
+
+<style id="t-style">
+/* Fixed structural values: not editable from the JSON */
+:root {
+  --pad: 96px;
+  --gap: 40px;
+}
+
+html, body { margin: 0; padding: 0; }
+body { background: #DAD6D0; }
+
+.t-slide {
+  box-sizing: border-box;
+  width: 1080px;
+  height: 1350px;
+  padding: var(--pad);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--size-body);
+  line-height: 1.45;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+.t-slide + .t-slide { margin-top: 40px; }
+.t-slide * { box-sizing: border-box; margin: 0; }
+.t-slide [hidden] { display: none !important; }
+
+/* Top row: slide counter and handle */
+.t-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  min-height: 1.4em;
+  font-size: var(--size-meta);
+  color: var(--color-muted);
+  letter-spacing: .04em;
+  font-variant-numeric: tabular-nums;
+}
+.t-meta__handle { margin-left: auto; }
+
+/* Main area: removed elements leave no gaps */
+.t-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--gap);
+}
+
+.t-foot {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 1.4em;
+  font-size: var(--size-meta);
+  color: var(--color-muted);
+  letter-spacing: .04em;
+}
+
+/* Typography */
+.t-kicker {
+  font-size: var(--size-kicker);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+.t-title {
+  font-family: var(--font-heading);
+  font-size: var(--size-title);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -.015em;
+  text-wrap: balance;
+}
+.t-cover .t-title { font-size: calc(var(--size-title) * 1.25); }
+.t-subtitle {
+  font-size: var(--size-subtitle);
+  line-height: 1.3;
+  color: var(--color-muted);
+  text-wrap: pretty;
+}
+.t-text { text-wrap: pretty; }
+.t-lead {
+  font-family: var(--font-heading);
+  font-size: calc(var(--size-title) * .8);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+.t-note { color: var(--color-muted); text-wrap: pretty; }
+
+/* number */
+.t-number {
+  font-family: var(--font-heading);
+  font-size: var(--size-number);
+  line-height: .85;
+  letter-spacing: -.03em;
+  color: var(--color-accent);
+}
+.t-caption {
+  font-size: var(--size-subtitle);
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+/* steps */
+.t-steps {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  counter-reset: step;
+}
+.t-step {
+  display: grid;
+  grid-template-columns: 1.6em 1fr;
+  column-gap: 32px;
+  counter-increment: step;
+}
+.t-step::before {
+  content: counter(step, decimal-leading-zero);
+  font-family: var(--font-heading);
+  font-size: var(--size-subtitle);
+  line-height: 1.2;
+  color: var(--color-accent);
+}
+.t-step__title {
+  font-size: var(--size-subtitle);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.t-step__text {
+  grid-column: 2;
+  margin-top: 8px;
+  color: var(--color-muted);
+}
+
+/* compare */
+.t-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 64px;
+}
+.t-group {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.t-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-size: calc(var(--size-body) * .9);
+  line-height: 1.3;
+}
+
+/* myth */
+.t-claim {
+  font-family: var(--font-heading);
+  font-size: calc(var(--size-title) * .7);
+  line-height: 1.1;
+  color: var(--color-muted);
+}
+.t-fact {
+  font-size: var(--size-subtitle);
+  line-height: 1.3;
+}
+
+/* closing */
+.t-cta {
+  font-size: var(--size-subtitle);
+  font-weight: 600;
+  color: var(--color-accent);
+}
+</style>
+</head>
+<body>
+
+<!-- 1. COVER -->
+<section class="t-slide t-cover" data-type="cover">
+  <header class="t-meta">
+    <span data-el="global.counter" data-field="meta.counter">01 / 08</span>
+    <span class="t-meta__handle" data-el="global.handle" data-field="meta.handle">@coffee_extracts</span>
+  </header>
+  <div class="t-body">
+    <p class="t-kicker" data-el="global.kicker" data-field="kicker">Coffee 101</p>
+    <h1 class="t-title" data-field="title">Espresso, the Italian way</h1>
+    <p class="t-subtitle" data-el="cover.subtitle" data-field="subtitle">Six things every home barista should know.</p>
+  </div>
+  <footer class="t-foot" data-el="cover.swipe">Swipe →</footer>
+</section>
+
+<!-- 2. TEXT -->
+<section class="t-slide" data-type="text">
+  <header class="t-meta">
+    <span data-el="global.counter" data-field="meta.counter">02 / 08</span>
+    <span class="t-meta__handle" data-el="global.handle" data-field="meta.handle">@coffee_extracts</span>
+  </header>
+  <div class="t-body">
+    <p class="t-kicker" data-el="global.kicker" data-field="kicker">The basics</p>
+    <h2 class="t-title" data-el="text.title" data-field="title">What is a ristretto?</h2>
+    <p class="t-text" data-field="body">A shorter, more concentrated espresso: the same dose of coffee with about half the water. Sweeter, thicker and less bitter.</p>
+  </div>
+</section>
+
+<!-- 3. NUMBER -->
+<section class="t-slide" data-type="number">
+  <header class="t-meta">
+    <span data-el="global.counter" data-field="meta.counter">03 / 08</span>
+    <span class="t-meta__handle" data-el="global.handle" data-field="meta.handle">@coffee_extracts</span>
+  </header>
+  <div class="t-body">
+    <p class="t-kicker" data-el="global.kicker" data-field="kicker">By the numbers</p>
+    <p class="t-number" data-field="value">92°</p>
+    <p class="t-caption" data-el="number.caption" data-field="caption">The ideal water temperature, in Celsius.</p>
+    <p class="t-text" data-el="number.body" data-field="body">Hotter water over-extracts and turns bitter. Cooler water leaves the shot sour and thin.</p>
+  </div>
+</section>
+
+<!-- 4. STEPS -->
+<section class="t-slide" data-type="steps">
+  <header class="t-meta">
+    <span data-el="global.counter" data-field="meta.counter">04 / 08</span>
+    <span class="t-meta__handle" data-el="global.handle" data-field="meta.handle">@coffee_extracts</span>
+  </header>
+  <div class="t-body">
+    <p class="t-kicker" data-el="global.kicker" data-field="kicker">How to</p>
+    <h2 class="t-title" data-field="title">Dial in your espresso</h2>
+    <ol class="t-steps">
+      <li class="t-step" data-repeat="steps">
+        <p class="t-step__title" data-field="step.title">Grind</p>
+        <p class="t-step__text" data-el="steps.descriptions" data-field="step.text">Medium-fine, like table salt.</p>
+      </li>
+      <li class="t-step" data-repeat="steps">
+        <p class="t-step__title" data-field="step.title">Dose</p>
+        <p class="t-step__text" data-el="steps.descriptions" data-field="step.text">18 g of coffee in, 36 g of espresso out.</p>
+      </li>
+      <li class="t-step" data-repeat="steps">
+        <p class="t-step__title" data-field="step.title">Pull</p>
+        <p class="t-step__text" data-el="steps.descriptions" data-field="step.text">25 to 30 seconds from the first drop.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- 5. COMPARE -->
+<section class="t-slide" data-type="compare">
+  <header class="t-meta">
+    <span data-el="global.counter" data-field="meta.counter">05 / 08</span>
+    <span class="t-meta__handle" data-el="global.handle" data-field="meta.handle">@coffee_extracts</span>
+  </header>
+  <div class="t-body">
+    <p class="t-kicker" data-el="global.kicker" data-field="kicker">Side by side</p>
+    <h2 class="t-title" data-field="title">Moka pot vs. espresso</h2>
+    <div class="t-compare">
+      <div class="t-group">
+        <p class="t-kicker" data-el="compare.labels" data-field="left.label">Moka pot</p>
+        <ul class="t-list">
+          <li data-repeat="left.items" data-field="item">Stovetop, about 1.5 bar</li>
+          <li data-repeat="left.items" data-field="item">Bold and slightly bitter</li>
+          <li data-repeat="left.items" data-field="item">No crema</li>
+        </ul>
+      </div>
+      <div class="t-group">
+        <p class="t-kicker" data-el="compare.labels" data-field="right.label">Espresso</p>
+        <ul class="t-list">
+          <li data-repeat="right.items" data-field="item">Pump, 9 bar</li>
+          <li data-repeat="right.items" data-field="item">Dense, syrupy body</li>
+          <li data-repeat="right.items" data-field="item">Hazelnut crema</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. MYTH -->
+<section class="t-slide" data-type="myth">
+  <header class="t-meta">
+    <span data-el="global.counter" data-field="meta.counter">06 / 08</span>
+    <span class="t-meta__handle" data-el="global.handle" data-field="meta.handle">@coffee_extracts</span>
+  </header>
+  <div class="t-body">
+    <p class="t-kicker" data-el="global.kicker" data-field="kicker">Myth busting</p>
+    <div class="t-group">
+      <p class="t-kicker" data-el="myth.labels">Myth</p>
+      <p class="t-claim" data-field="myth">Dark roast has more caffeine.</p>
+    </div>
+    <div class="t-group">
+      <p class="t-kicker" data-el="myth.labels">Fact</p>
+      <p class="t-fact" data-field="fact">Roast level barely changes caffeine. Measured by the scoop, light roast actually packs a little more.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7. TIP -->
+<section class="t-slide" data-type="tip">
+  <header class="t-meta">
+    <span data-el="global.counter" data-field="meta.counter">07 / 08</span>
+    <span class="t-meta__handle" data-el="global.handle" data-field="meta.handle">@coffee_extracts</span>
+  </header>
+  <div class="t-body">
+    <p class="t-kicker" data-el="global.kicker" data-field="kicker">Barista tip</p>
+    <p class="t-lead" data-field="tip">Warm your cup before pulling the shot.</p>
+    <p class="t-note" data-el="tip.note" data-field="note">A cold cup steals heat and dulls the aroma within seconds.</p>
+  </div>
+</section>
+
+<!-- 8. CLOSING -->
+<section class="t-slide" data-type="closing">
+  <header class="t-meta">
+    <span data-el="global.counter" data-field="meta.counter">08 / 08</span>
+    <span class="t-meta__handle" data-el="global.handle" data-field="meta.handle">@coffee_extracts</span>
+  </header>
+  <div class="t-body">
+    <p class="t-kicker" data-el="global.kicker" data-field="kicker">That's it</p>
+    <h2 class="t-title" data-field="title">Save it for your next shot.</h2>
+    <p class="t-text" data-el="closing.body" data-field="body">A new Italian coffee tip, three times a week.</p>
+    <p class="t-cta" data-el="closing.cta" data-field="cta">Save · Share · Follow</p>
+  </div>
+</section>
+
+</body>
+</html>

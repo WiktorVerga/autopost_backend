@@ -1,9 +1,12 @@
 """CRUD delle idee. Un'idea appartiene all'utente tramite la sua raccolta."""
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import exists, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session
 
+from autopost_server.api.filters import SEARCH_QUERY, text_search
 from autopost_server.db import get_db
 from autopost_server.models import Idea, IdeaCollection, Post, User
 from autopost_server.schemas.idea import IdeaCreate, IdeaRead, IdeaUpdate
@@ -31,6 +34,16 @@ def _check_collection_owned(db: Session, user: User, collection_id: int) -> None
 @router.get("", response_model=list[IdeaRead])
 def list_ideas(
     idea_collection_id: int | None = Query(None, description="Filtra per raccolta"),
+    search: str | None = SEARCH_QUERY,
+    category: str | None = Query(
+        None,
+        min_length=1,
+        max_length=100,
+        description="Filtra per categoria (esatta, senza distinzione tra maiuscole e minuscole)",
+    ),
+    order: Literal["oldest", "newest"] = Query(
+        "oldest", description="Ordine di creazione: prima le più vecchie o prima le più nuove"
+    ),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     user: User = Depends(get_current_user),
@@ -39,7 +52,13 @@ def list_ideas(
     stmt = select(Idea).join(Idea.collection).where(IdeaCollection.user_id == user.id)
     if idea_collection_id is not None:
         stmt = stmt.where(Idea.idea_collection_id == idea_collection_id)
-    stmt = stmt.order_by(Idea.id).offset(skip).limit(limit)
+    if (condition := text_search(search, Idea.title, Idea.description)) is not None:
+        stmt = stmt.where(condition)
+    if category is not None:
+        stmt = stmt.where(func.lower(Idea.category) == category.strip().lower())
+    # le idee non hanno created_at: l'id, assegnato in sequenza, segue l'ordine di creazione
+    stmt = stmt.order_by(Idea.id.desc() if order == "newest" else Idea.id)
+    stmt = stmt.offset(skip).limit(limit)
     return db.scalars(stmt).all()
 
 

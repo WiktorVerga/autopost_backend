@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 
 from autopost_server.db import SessionLocal, engine
 from autopost_server.models import Post, Program
-from autopost_server.models.enums import PostStatus, ProgramMode
+from autopost_server.models.enums import PostStatus, ProgramMode, ProgramStatus
 from autopost_server.services.instagram import refresh_expiring_tokens
 from autopost_server.services.logs import log_error, log_info
 from autopost_server.services.pipeline import (
@@ -75,7 +75,7 @@ def start_scheduler() -> None:
     scheduler.start()
     with SessionLocal() as db:
         _fail_interrupted_publishing(db)
-        for program in db.scalars(select(Program).where(Program.is_active)).all():
+        for program in db.scalars(select(Program).where(Program.status == ProgramStatus.ACTIVE)).all():
             sync_program(program)
         db.commit()  # salva i next_run calcolati
     scheduler.add_job(
@@ -107,7 +107,7 @@ def sync_program(program: Program) -> None:
     """Allinea il job al programma e aggiorna program.next_run; il commit spetta al chiamante."""
     if not scheduler.running:
         return
-    if not program.is_active or program.idea_collection_id is None:
+    if program.status != ProgramStatus.ACTIVE or program.idea_collection_id is None or program.template_id is None:
         unschedule_program(program.id)
         program.next_run = None
         return
@@ -241,7 +241,7 @@ async def run_program(program_id: int) -> None:
     """Job di un programma: aggiorna next_run ed esegue la pipeline."""
     with SessionLocal() as db:
         program = db.get(Program, program_id)
-        if program is None or not program.is_active:
+        if program is None or program.status != ProgramStatus.ACTIVE:
             # il programma è stato eliminato o disattivato senza passare dal router
             unschedule_program(program_id)
             return

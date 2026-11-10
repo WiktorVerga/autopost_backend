@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "autopost/templates/plain.schema.json",
+  "title": "Template plain",
+  "description": "Customization of the \"plain\" base template. Every field is optional except schema_version and base_template: missing values fall back to the defaults defined here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "base_template"],
+  "properties": {
+    "schema_version": {
+      "description": "Version of the JSON structure.",
+      "const": 1,
+      "default": 1
+    },
+    "base_template": {
+      "description": "Base template the customization is applied to.",
+      "const": "plain",
+      "default": "plain"
+    },
+
+    "colors": {
+      "description": "Colors in hexadecimal format.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "background": { "$ref": "#/$defs/color", "description": "Slide background.", "default": "#F4EFE7" },
+        "text":       { "$ref": "#/$defs/color", "description": "Primary text.", "default": "#1E1A17" },
+        "muted":      { "$ref": "#/$defs/color", "description": "Secondary text: slide counter, handle, subtitles, notes.", "default": "#7B7068" },
+        "accent":     { "$ref": "#/$defs/color", "description": "Accent: labels, big number, CTA.", "default": "#9A6B43" }
+      },
+      "default": {
+        "background": "#F4EFE7",
+        "text": "#1E1A17",
+        "muted": "#7B7068",
+        "accent": "#9A6B43"
+      }
+    },
+
+    "fonts": {
+      "description": "Fonts from a closed list of Google Fonts.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "heading": { "$ref": "#/$defs/font", "description": "Titles, big number, highlighted statements.", "default": "Fraunces" },
+        "body":    { "$ref": "#/$defs/font", "description": "Body text, labels, slide counter and handle.", "default": "Inter" }
+      },
+      "default": {
+        "heading": "Fraunces",
+        "body": "Inter"
+      }
+    },
+
+    "sizes": {
+      "description": "Text sizes in px, on a 1080×1350 slide.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title":    { "type": "integer", "minimum": 48,  "maximum": 160, "default": 96,  "description": "Titles. Multiplied by 1.25 on the cover." },
+        "subtitle": { "type": "integer", "minimum": 24,  "maximum": 80,  "default": 44,  "description": "Subtitles, captions, step titles, CTA." },
+        "body":     { "type": "integer", "minimum": 24,  "maximum": 64,  "default": 40,  "description": "Body text." },
+        "kicker":   { "type": "integer", "minimum": 16,  "maximum": 48,  "default": 26,  "description": "Uppercase labels above titles." },
+        "number":   { "type": "integer", "minimum": 120, "maximum": 480, "default": 320, "description": "Big number on the number slide." },
+        "meta":     { "type": "integer", "minimum": 16,  "maximum": 40,  "default": 26,  "description": "Slide counter, handle, swipe hint." }
+      },
+      "default": {
+        "title": 96,
+        "subtitle": 44,
+        "body": 40,
+        "kicker": 26,
+        "number": 320,
+        "meta": 26
+      }
+    },
+
+    "visibility": {
+      "description": "Optional text elements to show (true) or hide (false). Keys match the data-el attributes in the HTML template.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "global": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Elements present on every slide.",
+          "properties": {
+            "counter": { "type": "boolean", "default": true, "description": "Slide counter, e.g. 01 / 08." },
+            "handle":  { "type": "boolean", "default": true, "description": "Instagram handle, top right." },
+            "kicker":  { "type": "boolean", "default": true, "description": "Label above the title." }
+          },
+          "default": { "counter": true, "handle": true, "kicker": true }
+        },
+        "cover": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "subtitle": { "type": "boolean", "default": true },
+            "swipe":    { "type": "boolean", "default": true, "description": "Swipe → hint at the bottom." }
+          },
+          "default": { "subtitle": true, "swipe": true }
+        },
+        "text": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": { "type": "boolean", "default": true }
+          },
+          "default": { "title": true }
+        },
+        "number": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "caption": { "type": "boolean", "default": true, "description": "Caption below the number." },
+            "body":    { "type": "boolean", "default": true }
+          },
+          "default": { "caption": true, "body": true }
+        },
+        "steps": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "descriptions": { "type": "boolean", "default": true, "description": "Text below each step title." }
+          },
+          "default": { "descriptions": true }
+        },
+        "compare": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "labels": { "type": "boolean", "default": true, "description": "Names of the two columns." }
+          },
+          "default": { "labels": true }
+        },
+        "myth": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "labels": { "type": "boolean", "default": true, "description": "Myth and Fact labels." }
+          },
+          "default": { "labels": true }
+        },
+        "tip": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "note": { "type": "boolean", "default": true }
+          },
+          "default": { "note": true }
+        },
+        "closing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "body": { "type": "boolean", "default": true },
+            "cta":  { "type": "boolean", "default": true }
+          },
+          "default": { "body": true, "cta": true }
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "color": {
+      "type": "string",
+      "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+    },
+    "font": {
+      "type": "string",
+      "enum": [
+        "Inter",
+        "Space Grotesk",
+        "IBM Plex Mono",
+        "Fraunces",
+        "Playfair Display",
+        "DM Serif Display"
+      ]
+    }
+  }
+}

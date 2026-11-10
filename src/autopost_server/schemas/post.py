@@ -1,9 +1,12 @@
+import logging
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, computed_field
 
 from autopost_server.models.enums import PostStatus
 from autopost_server.services.storage import StorageError, presigned_url
+
+logger = logging.getLogger(__name__)
 
 
 class PostBase(BaseModel):
@@ -33,10 +36,11 @@ class SlideRead(BaseModel):
     @computed_field
     @property
     def url(self) -> str | None:
-        """URL pre-firmato e temporaneo per visualizzare la slide; None se S3 non è configurato."""
+        """URL pre-firmato e temporaneo per visualizzare la slide; None se non si riesce a firmarlo."""
         try:
             return presigned_url(self.storage_key)
-        except StorageError:
+        except StorageError as e:
+            logger.warning("Slide URL unavailable: %s", e)
             return None
 
 
