@@ -50,7 +50,7 @@ jobs:
             set -e
             cd ~/autopost
             git fetch origin
-            git reset --hard origin/main
+            git reset --hard origin/master
             export IMAGE_TAG=${{ github.sha }}
             docker compose pull backend
             docker compose up -d
