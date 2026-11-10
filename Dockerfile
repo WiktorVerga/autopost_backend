@@ -15,13 +15,13 @@ WORKDIR /app
 # Prima solo le dipendenze, così Docker riusa la cache se cambia solo il codice
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
+ENV PATH="/app/.venv/bin:$PATH"
+
+# CAMBIATO: spostato qui, prima del codice, così Chromium resta in cache
+RUN playwright install --with-deps chromium
 
 COPY . .
 RUN uv sync --frozen --no-dev
-ENV PATH="/app/.venv/bin:$PATH"
-
-# Chromium per il rendering HTML → immagine (se usi Playwright)
-RUN playwright install --with-deps chromium
 
 EXPOSE 8000
 # Migrazioni all'avvio, poi l'API con UN SOLO worker (lo scheduler gira nel processo)
