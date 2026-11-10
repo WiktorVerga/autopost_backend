@@ -1,70 +1,57 @@
-name: Deploy
+name: Build e deploy backend
 
 on:
   push:
-    branches: [master]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: deploy
 
 permissions:
   contents: read
   packages: write
-  id-token: write   # necessario per OIDC
+
+env:
+  IMAGE: ghcr.io/wiktorverga/autopost_backend
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
-
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/wiktorverga/autopost_backend:latest
-            ghcr.io/wiktorverga/autopost_backend:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Diagnosi OIDC (temporaneo)
-        uses: actions/github-script@v7
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy su Azure via SSH
+        uses: appleboy/ssh-action@v1
         with:
+          host: ${{ secrets.AZURE_HOST }}
+          username: autopost
+          key: ${{ secrets.AZURE_SSH_KEY }}
+          command_timeout: 15m
           script: |
-            const t = await core.getIDToken('sts.amazonaws.com');
-            const c = JSON.parse(Buffer.from(t.split('.')[1], 'base64url').toString());
-            core.info(`sub = ${c.sub}`);
-            core.info(`aud = ${c.aud}`);
-            core.info(`ruolo richiesto = ${process.env.ROLE}`);
-        env:
-          ROLE: ${{ vars.AWS_ROLE_ARN }}
-          
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: eu-central-1
-
-      - name: Deploy sul server via SSM
-        run: |
-          CMD_ID=$(aws ssm send-command \
-            --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
-            --document-name AWS-RunShellScript \
-            --parameters 'commands=["sudo -iu ubuntu /opt/autopost/deploy/deploy.sh"]' \
-            --query 'Command.CommandId' --output text)
-          for i in $(seq 1 60); do
-            STATUS=$(aws ssm get-command-invocation --command-id "$CMD_ID" \
-              --instance-id "${{ vars.EC2_INSTANCE_ID }}" --query Status --output text 2>/dev/null || echo Pending)
-            echo "Stato: $STATUS"
-            case "$STATUS" in
-              Success) exit 0 ;;
-              Failed|Cancelled|TimedOut) exit 1 ;;
-            esac
-            sleep 10
-          done
-          exit 1
+            set -e
+            cd ~/autopost
+            git fetch origin
+            git reset --hard origin/main
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull backend
+            docker compose up -d
+            docker image prune -f
