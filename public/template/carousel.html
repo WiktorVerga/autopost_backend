@@ -270,21 +270,21 @@ html[data-mode="preview"] .slide { zoom: .36; }
 -->
 <script id="data" type="application/json">
 {
-  "series": "How-to",
+  "category": "How-to",
   "handle": "@yourpage",
   "slides": [
     { "type": "cover", "kicker": "How-to", "title": "Fill a moka pot the right way", "subtitle": "Four small moves that change your morning coffee." },
-    { "type": "myth", "myth": "You should tamp the coffee down hard.", "verdict": "false", "truth": "Not in a moka pot: just level it. Packed coffee makes it hard for water to pass, and the result tastes bitter and burnt." },
-    { "type": "steps", "title": "Filling it, in order", "steps": [
-      "Water in the bottom chamber, just below the valve.",
-      "Coffee in the filter basket, no tamping.",
-      "Level it and wipe stray grounds off the rim.",
-      "Screw it shut firmly, without forcing it."
+    { "type": "myth", "kicker": "Myth busting", "myth": "You should tamp the coffee down hard.", "fact": "Not in a moka pot: just level it. Packed coffee makes it hard for water to pass, and the result tastes bitter and burnt." },
+    { "type": "steps", "kicker": "How to", "title": "Filling it, in order", "steps": [
+      { "title": "Water", "text": "In the bottom chamber, just below the valve." },
+      { "title": "Coffee", "text": "In the filter basket, no tamping." },
+      { "title": "Level", "text": "Wipe stray grounds off the rim." },
+      { "title": "Close", "text": "Screw it shut firmly, without forcing it." }
     ] },
-    { "type": "text", "title": "Why the valve matters", "body": "It releases pressure if something gets blocked. If the water covers it, it can't do its job.", "highlight": "Keep the water below the valve." },
-    { "type": "compare", "title": "Grind: moka vs espresso", "left": { "label": "Moka", "points": ["Medium, slightly gritty", "Like fine table salt"] }, "right": { "label": "Espresso", "points": ["Fine, almost powder", "Sticks to your fingers"] } },
-    { "type": "number", "number": "1.5", "unit": "bar", "caption": "Roughly the pressure inside a moka pot. Espresso uses around 9: that's why they're two different coffees." },
-    { "type": "tip", "label": "The tip", "body": "Low heat, and never let the flame reach past the sides of the base." },
+    { "type": "text", "kicker": "Safety", "title": "Why the valve matters", "body": "It releases pressure if something gets blocked. If the water covers it, it can't do its job." },
+    { "type": "compare", "kicker": "Side by side", "title": "Grind: moka vs espresso", "left": { "label": "Moka", "items": ["Medium, slightly gritty", "Like fine table salt"] }, "right": { "label": "Espresso", "items": ["Fine, almost powder", "Sticks to your fingers"] } },
+    { "type": "number", "kicker": "By the numbers", "value": "1.5 bar", "caption": "Roughly the pressure inside a moka pot.", "body": "Espresso uses around 9: that's why they're two different coffees." },
+    { "type": "tip", "kicker": "The tip", "tip": "Keep the heat low.", "note": "Never let the flame reach past the sides of the base." },
     { "type": "closing", "title": "Save it for tomorrow morning", "body": "Four moves, no extra gear. The moka does the rest.", "cta": "Save and try it" }
   ]
 }
@@ -317,19 +317,21 @@ html[data-mode="preview"] .slide { zoom: .36; }
     number: s => `
       <div class="content">
         ${s.title ? `<h2 class="title" data-fit>${esc(s.title)}</h2>` : ""}
-        <p class="number" data-fit-w>${esc(s.number)}${s.unit ? `<span class="unit">${esc(s.unit)}</span>` : ""}</p>
+        <p class="number" data-fit-w>${esc(s.value ?? s.number)}${s.unit ? `<span class="unit">${esc(s.unit)}</span>` : ""}</p>
         <p class="body">${esc(s.caption)}</p>
+        ${s.body ? `<p class="body">${esc(s.body)}</p>` : ""}
       </div>`,
     steps: s => `
       <div class="content">
         <h2 class="title" data-fit>${esc(s.title)}</h2>
-        <ol>${(s.steps || []).map(p => `<li><span>${esc(p)}</span></li>`).join("")}</ol>
+        <ol>${(s.steps || []).map(p => `<li><span>${typeof p === "string" ? esc(p)
+          : `<strong>${esc(p.title)}</strong>${p.text ? ` ${esc(p.text)}` : ""}`}</span></li>`).join("")}</ol>
       </div>`,
     compare: s => {
       const col = (c) => `
         <div class="col">
           <h3>${esc(c?.label)}</h3>
-          ${(c?.points || []).map(p => `<p>${esc(p)}</p>`).join("")}
+          ${(c?.items || c?.points || []).map(p => `<p>${esc(p)}</p>`).join("")}
         </div>`;
       return `
       <div class="dark-half"></div>
@@ -344,13 +346,14 @@ html[data-mode="preview"] .slide { zoom: .36; }
         <p class="label">People say</p>
         <p class="myth" data-fit>${esc(s.myth)}</p>
         <p class="verdict">${String(s.verdict).toLowerCase() === "true" ? "True." : "False."}</p>
-        <p class="body">${esc(s.truth)}</p>
+        <p class="body">${esc(s.fact ?? s.truth)}</p>
       </div>`,
     tip: s => `
       <div class="cup"></div>
       <div class="content">
-        <p class="label">${esc(s.label || "The tip")}</p>
-        <p class="body" data-fit>${esc(s.body)}</p>
+        <p class="label">${esc(s.kicker || s.label || "The tip")}</p>
+        <p class="body" data-fit>${esc(s.tip ?? s.body)}</p>
+        ${s.note ? `<p class="body">${esc(s.note)}</p>` : ""}
       </div>`,
     closing: s => `
       <div class="cup"></div>

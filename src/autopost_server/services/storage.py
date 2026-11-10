@@ -34,7 +34,7 @@ def _client():
             "aws_access_key_id": settings.aws_access_key_id,
             "aws_secret_access_key": settings.aws_secret_access_key.get_secret_value(),
         }
-    return boto3.client(
+    return boto3.Session(profile_name=settings.aws_profile or None).client(
         "s3",
         region_name=settings.s3_region,
         config=Config(signature_version="s3v4"),

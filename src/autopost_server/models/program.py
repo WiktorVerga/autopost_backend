@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from autopost_server.db import Base
 from autopost_server.models.column_types import pg_enum
-from autopost_server.models.enums import LogStatus, ProgramMode
+from autopost_server.models.enums import LogStatus, ProgramMode, ProgramStatus
 
 
 class Program(Base):
@@ -14,8 +14,13 @@ class Program(Base):
     __table_args__ = (
         # un programma attivo deve avere una raccolta collegata
         CheckConstraint(
-            "NOT is_active OR idea_collection_id IS NOT NULL",
+            "status <> 'active' OR idea_collection_id IS NOT NULL",
             name="ck_program_active_needs_collection",
+        ),
+        # e un template con cui disegnare i post
+        CheckConstraint(
+            "status <> 'active' OR template_id IS NOT NULL",
+            name="ck_program_active_needs_template",
         ),
     )
 
@@ -26,16 +31,26 @@ class Program(Base):
     )
     cron_expression: Mapped[str] = mapped_column(String(100))
     timezone: Mapped[str] = mapped_column(String(64), default="Europe/Rome")
-    is_active: Mapped[bool] = mapped_column(default=False)
+    status: Mapped[ProgramStatus] = mapped_column(
+        pg_enum(ProgramStatus, "program_status"),
+        default=ProgramStatus.INACTIVE,
+        server_default=ProgramStatus.INACTIVE.value,
+        index=True,
+    )
     last_run: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     next_run: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     instagram_account_id: Mapped[int] = mapped_column(ForeignKey("instagram_accounts.id"))
     idea_collection_id: Mapped[int | None] = mapped_column(
         ForeignKey("idea_collections.id", ondelete="SET NULL")
     )
+    # un solo template per programma; lo stesso template può servire più programmi
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("templates.id", ondelete="SET NULL"), index=True
+    )
 
     instagram_account: Mapped["InstagramAccount"] = relationship(back_populates="programs")
     idea_collection: Mapped[Optional["IdeaCollection"]] = relationship(back_populates="programs")
+    template: Mapped[Optional["Template"]] = relationship(back_populates="programs")
     posts: Mapped[list["Post"]] = relationship(back_populates="program")
     logs: Mapped[list["Log"]] = relationship(
         back_populates="program", cascade="all, delete-orphan", passive_deletes=True
