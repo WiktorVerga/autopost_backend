@@ -51,8 +51,8 @@ jobs:
             cd ~/autopost
             git fetch origin
             git reset --hard origin/master
+            cd deploy
             export IMAGE_TAG=${{ github.sha }}
-            cd ./deploy
             docker compose pull backend
             docker compose up -d
             docker image prune -f
