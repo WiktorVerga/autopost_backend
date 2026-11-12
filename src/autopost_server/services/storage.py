@@ -34,7 +34,10 @@ def _client():
             "aws_access_key_id": settings.aws_access_key_id,
             "aws_secret_access_key": settings.aws_secret_access_key.get_secret_value(),
         }
-    return boto3.client(
+    # il profilo va passato esplicitamente: pydantic legge AWS_PROFILE dal .env ma non lo mette
+    # nell'ambiente, quindi boto3 da solo non lo vedrebbe. Le chiavi esplicite hanno la precedenza
+    session = boto3.Session(profile_name=None if credentials else (settings.aws_profile or None))
+    return session.client(
         "s3",
         region_name=settings.s3_region,
         config=Config(signature_version="s3v4"),

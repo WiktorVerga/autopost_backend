@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     database_url: str
     token_encryption_key: SecretStr
 
+    # espone /docs, /redoc e /openapi.json; spento di default così in produzione non sono
+    # raggiungibili, va acceso solo nel .env di sviluppo
+    enable_docs: bool = False
+
     # --- Google OAuth ---
     google_client_id: str
     google_client_secret: SecretStr
@@ -49,6 +53,8 @@ class Settings(BaseSettings):
     # opzionali: se vuote boto3 usa la propria catena di credenziali (~/.aws, ruolo IAM...)
     aws_access_key_id: str | None = None
     aws_secret_access_key: SecretStr | None = None
+    # profilo di ~/.aws da usare in sviluppo al posto delle chiavi; ignorato se le chiavi ci sono
+    aws_profile: str | None = None
 
     # --- Sessione e JWT ---
     # firma il cookie di sessione usato solo durante il giro OAuth (state, nonce)

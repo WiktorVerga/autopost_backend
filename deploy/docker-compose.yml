@@ -8,7 +8,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    mem_limit: 2500m        # se il rendering esagera, viene fermato il backend, non il database
+    shm_size: "1gb"         # NUOVO: Chromium usa /dev/shm, il default di 64 MB è stretto
+    mem_limit: 5g           # CAMBIATO: prima 2500m, ora la VM ha 8 GB
+    # NUOVO, solo se salvi i contenuti generati sul disco del server:
+    # volumes:
+    #   - media:/app/media  # sostituisci /app/media con la cartella usata dal backend
 
   db:
     image: postgres:17
@@ -25,7 +29,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U autopost"]
       interval: 10s
       retries: 5
-    mem_limit: 512m
+    mem_limit: 1g             # CAMBIATO: prima 512m
 
   caddy:
     image: caddy:2
@@ -44,3 +48,4 @@ volumes:
   pgdata:
   caddy_data:
   caddy_config:
+  # media:                    # NUOVO: scommenta insieme al volume del backend
