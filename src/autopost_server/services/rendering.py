@@ -5,8 +5,8 @@ Le slide si disegnano con il template Jinja collegato al programma del post
 contenuto del post diventa l'HTML della pagina, che si apre in Chromium (Playwright) nella stessa
 sandbox delle anteprime dei template; ogni slide si cattura come immagine 1080 × 1350.
 
-Le immagini vengono scritte in una cartella temporanea e caricate su S3 (services/storage.py):
-sul server non resta nulla, del rendering si conservano solo le chiavi S3 delle slide.
+Le immagini vengono scritte in una cartella temporanea e caricate su R2 (services/storage.py):
+sul server non resta nulla, del rendering si conservano solo le chiavi R2 delle slide.
 """
 
 import shutil
@@ -189,7 +189,7 @@ def _fill_template(jinja_content: str, content: dict) -> str:
 
 def render_slides(post_id: int, content: dict, jinja_content: str) -> RenderResult:
     """Disegna il contenuto del post con il template Jinja `jinja_content` (quello del
-    programma), crea un JPEG per slide e lo carica su S3 (posts/<post_id>/slide-1.jpg, ...).
+    programma), crea un JPEG per slide e lo carica su R2 (posts/<post_id>/slide-1.jpg, ...).
 
     Sincrona e lenta (avvia un browser e carica le immagini): dal codice asincrono va chiamata
     con asyncio.to_thread.

@@ -180,11 +180,11 @@ def delete_post(
     db.delete(post)  # le slide vengono eliminate a cascata
     db.commit()
     if had_slides:
-        # le immagini su S3 non servono più; se la cancellazione fallisce restano solo orfane
+        # le immagini su R2 non servono più; se la cancellazione fallisce restano solo orfane
         try:
             delete_old_slides(post_id, [])
         except StorageError:
-            logger.exception("Deleting the S3 slides of post %s failed", post_id)
+            logger.exception("Deleting the R2 slides of post %s failed", post_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @router.get("/{post_id}/contents", response_model=PostContentRead)

@@ -5,10 +5,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    # extra="ignore": variabili non più usate (es. le vecchie S3_* e AWS_*) rimaste in un .env non
+    # bloccano l'avvio del server
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     database_url: str
     token_encryption_key: SecretStr
+
+    # espone /docs, /redoc e /openapi.json; spento di default così in produzione non sono
+    # raggiungibili, va acceso solo nel .env di sviluppo
+    enable_docs: bool = False
 
     # --- Google OAuth ---
     google_client_id: str
@@ -38,19 +44,30 @@ class Settings(BaseSettings):
     # sono disponibili
     chrome_path: str | None = None
 
-    # --- Amazon S3, per archiviare le slide ---
+    # --- Cloudflare R2, per archiviare le slide ---
     # le slide renderizzate vengono caricate nel bucket (privato) e nel DB resta solo la chiave;
-    # alla pubblicazione Instagram le scarica da un URL pre-firmato. Senza bucket il rendering
-    # fallisce
-    s3_bucket: str | None = None
-    s3_region: str = "eu-central-1"
-    # validità degli URL pre-firmati: Instagram scarica le immagini mentre si crea il container
-    s3_presigned_url_expires: int = 3600
-    # opzionali: se vuote boto3 usa la propria catena di credenziali (~/.aws, ruolo IAM...)
-    aws_access_key_id: str | None = None
-    aws_secret_access_key: SecretStr | None = None
-    # profilo di ~/.aws da usare in sviluppo; ignorato se sono impostate le chiavi qui sopra
-    aws_profile: str | None = None
+    # frontend e Instagram le scaricano da URL pre-firmati. Senza configurazione R2 il server
+    # parte, ma il rendering dei post fallisce
+    r2_account_id: str | None = None
+    # token API R2 (dashboard Cloudflare > R2 > Gestisci token API) con permesso
+    # "Object Read & Write" sul bucket
+    r2_access_key_id: str | None = None
+    r2_secret_access_key: SecretStr | None = None
+    r2_bucket: str | None = None
+    # opzionale: endpoint S3 del bucket, se vuoto https://<r2_account_id>.r2.cloudflarestorage.com.
+    # Per un bucket con giurisdizione UE va impostato a https://<r2_account_id>.eu.r2.cloudflarestorage.com
+    r2_endpoint_url: str | None = None
+    # validità degli URL pre-firmati (massimo 7 giorni): Instagram scarica le immagini mentre si
+    # crea il container, il frontend ne riceve di nuovi a ogni lettura del post
+    r2_presigned_url_expires: int = 3600
+
+    @property
+    def r2_endpoint(self) -> str | None:
+        if self.r2_endpoint_url:
+            return self.r2_endpoint_url.rstrip("/")
+        if self.r2_account_id:
+            return f"https://{self.r2_account_id}.r2.cloudflarestorage.com"
+        return None
 
     # --- Sessione e JWT ---
     # firma il cookie di sessione usato solo durante il giro OAuth (state, nonce)
