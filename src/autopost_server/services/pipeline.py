@@ -151,7 +151,8 @@ def set_content(post: Post, content: CarouselContent) -> None:
 
 
 async def render_post(db: Session, post: Post) -> None:
-    """Crea le slide del post a partire da post.content e dal template del carosello.
+    """Crea le slide del post a partire da post.content e dal template Jinja collegato al suo
+    programma (Program.template, letto dal DB a ogni rendering: vale l'ultima versione salvata).
 
     Le immagini vengono caricate su S3 e di ogni slide si salva solo la chiave (Slide.storage_key):
     l'URL da cui Instagram la scarica si genera alla pubblicazione.
@@ -160,13 +161,16 @@ async def render_post(db: Session, post: Post) -> None:
     """
     if post.content is None:
         raise RenderError(f"Post {post.id} has no content to render")
+    template = post.program.template
+    if template is None:
+        raise RenderError(f"Program {post.program_id} has no template to render post {post.id}")
 
     content = dict(post.content)
     handle = post.program.instagram_account.handle.lstrip("@")
     content["handle"] = f"@{handle}"
 
     # il browser è lento e bloccante: fuori dall'event loop condiviso con l'API
-    result = await asyncio.to_thread(render_slides, post.id, content)
+    result = await asyncio.to_thread(render_slides, post.id, content, template.jinja_content)
 
     post.slides.clear()
     # le DELETE prima delle INSERT, altrimenti violano uq_slide_post_position
