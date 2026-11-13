@@ -41,7 +41,7 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
 
     # il token resta nel cookie HttpOnly: il JavaScript del frontend non lo vede mai
     if settings.frontend_url:
-        response = RedirectResponse(settings.frontend_url)
+        response = RedirectResponse(settings.frontend_url + "/dashboard")
         set_auth_cookie(response, access_token)
         return response
     # senza frontend (sviluppo) il token esce anche nel JSON, per usarlo come Bearer in Swagger
