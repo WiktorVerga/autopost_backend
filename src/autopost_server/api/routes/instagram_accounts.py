@@ -78,7 +78,7 @@ async def instagram_callback(
 
     if settings.frontend_url:
         fragment = urlencode({"instagram_account_id": account.id})
-        return RedirectResponse(f"{settings.frontend_url}#{fragment}")
+        return RedirectResponse(f"{settings.frontend_url}{"/dashboard"}#{fragment}")
     return account
 
 
