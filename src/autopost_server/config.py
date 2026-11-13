@@ -85,6 +85,19 @@ class Settings(BaseSettings):
     # abilitata da CORS. Se vuoto il callback restituisce il token come JSON
     frontend_url: str | None = None
 
+    # --- Claude API, Workload Identity Federation con issuer Azure Entra ID ---
+    # sostituisce l'API key (che scade): se rule, organization e audience sono impostati ha la
+    # precedenza su anthropic_api_key, che resta come fallback (es. sviluppo locale senza IMDS)
+    # audience del JWT richiesto a Entra ID, nella forma api://<APP_ID>
+    azure_claude_audience: str | None = None
+    # client ID della managed identity: serve solo se la VM ne ha più di una user-assigned
+    azure_client_id: str | None = None
+    anthropic_federation_rule_id: str | None = None
+    anthropic_organization_id: str | None = None
+    anthropic_service_account_id: str | None = None
+    # obbligatorio solo se la regola di federazione copre più workspace
+    anthropic_workspace_id: str | None = None
+
     @property
     def frontend_origin(self) -> str | None:
         """Schema, host e porta di frontend_url (es. http://localhost:3000), senza percorso."""
