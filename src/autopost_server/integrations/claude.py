@@ -8,23 +8,21 @@ servizi che la usano (services/generation.py), non qui.
 from functools import lru_cache
 
 import anthropic
+import requests
 from pydantic import BaseModel
 
 from autopost_server.config import settings
+from autopost_server.integrations.claude_client import is_configured, make_async_client
 
 
 class ClaudeError(Exception):
     pass
 
 
-def is_configured() -> bool:
-    return settings.anthropic_api_key is not None
-
-
 @lru_cache
 def _client() -> anthropic.AsyncAnthropic:
-    # un solo client per processo: riusa le connessioni HTTP
-    return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key.get_secret_value())
+    # un solo client per processo: riusa le connessioni HTTP e la cache del token di federazione
+    return make_async_client()
 
 
 async def generate_structured[T: BaseModel](
@@ -35,7 +33,7 @@ async def generate_structured[T: BaseModel](
     Solleva ClaudeError per configurazione mancante, errori dell'API, rifiuti o risposte troncate.
     """
     if not is_configured():
-        raise ClaudeError("Claude API not configured (ANTHROPIC_API_KEY missing)")
+        raise ClaudeError("Claude API not configured (federation variables or ANTHROPIC_API_KEY missing)")
     try:
         response = await _client().beta.messages.parse(
             model=settings.claude_model,
@@ -49,7 +47,14 @@ async def generate_structured[T: BaseModel](
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
         )
+    except anthropic.WorkloadIdentityError as e:
+        # scambio JWT Entra -> token Anthropic rifiutato (regola, audience o service account errati)
+        raise ClaudeError(f"Claude API federation failed: {e}") from e
     except anthropic.APIConnectionError as e:
+        # l'SDK incapsula qui anche gli errori del provider del JWT: IMDS non raggiungibile
+        # (es. fuori da Azure) o managed identity non assegnata alla VM
+        if isinstance(e.__cause__, requests.RequestException):
+            raise ClaudeError(f"Entra ID token unavailable from IMDS: {e.__cause__}") from e
         raise ClaudeError(f"Claude API unreachable: {e}") from e
     except anthropic.APIStatusError as e:
         # l'SDK ha già ritentato 429 e 5xx: qui arrivano errori definitivi
