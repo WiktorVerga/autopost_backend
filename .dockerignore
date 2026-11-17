@@ -2,5 +2,17 @@
 .idea
 __pycache__
 .git
+.github
+.pytest_cache
+.ruff_cache
+# segreti: non devono finire nell'immagine
 .env
+.env.*
+!.env.example
 deploy/.env
+*.pem
+# non servono al backend
+autopost-frontend
+deploy
+media
+*.stackdump

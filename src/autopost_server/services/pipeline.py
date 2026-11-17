@@ -154,7 +154,7 @@ async def render_post(db: Session, post: Post) -> None:
     """Crea le slide del post a partire da post.content e dal template Jinja collegato al suo
     programma (Program.template, letto dal DB a ogni rendering: vale l'ultima versione salvata).
 
-    Le immagini vengono caricate su S3 e di ogni slide si salva solo la chiave (Slide.storage_key):
+    Le immagini vengono caricate su R2 e di ogni slide si salva solo la chiave (Slide.storage_key):
     l'URL da cui Instagram la scarica si genera alla pubblicazione.
     Il post può essere una ripresa di un'esecuzione fallita: le slide già presenti vengono
     sostituite, non aggiunte.
@@ -234,7 +234,7 @@ async def publish_post(db: Session, post: Post) -> Post:
             if not post.slides:
                 raise instagram.InstagramError(f"Post {post.id} has no rendered slides")
             # generati ora, subito prima dei container: Instagram scarica le immagini mentre li
-            # crea e gli URL scadono dopo settings.s3_presigned_url_expires secondi
+            # crea e gli URL scadono dopo settings.r2_presigned_url_expires secondi
             urls = [presigned_url(slide.storage_key) for slide in post.slides]
             post.container_id = await instagram.create_post_container(
                 account.ig_user_id, account.access_token, urls, post.caption

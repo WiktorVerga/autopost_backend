@@ -54,7 +54,7 @@ A failed post frees its idea again, so the next run can retry it. In `preview` m
 
 ## API
 
-Interactive docs are available at `/docs` (Swagger UI) once the server is running.
+Interactive docs are available at `/docs` (Swagger UI) once the server is running, only when `ENABLE_DOCS=true` (off by default, so they are not exposed in production).
 
 | Prefix | Endpoints |
 |---|---|

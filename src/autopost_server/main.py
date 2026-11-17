@@ -26,7 +26,14 @@ async def lifespan(app: FastAPI):
     shutdown_scheduler()
 
 
-app = FastAPI(title="Autopost Server", lifespan=lifespan)
+app = FastAPI(
+    title="Autopost Server",
+    lifespan=lifespan,
+    # senza openapi_url spariscono anche /docs e /redoc, che ne leggono lo schema
+    docs_url="/docs" if settings.enable_docs else None,
+    redoc_url="/redoc" if settings.enable_docs else None,
+    openapi_url="/openapi.json" if settings.enable_docs else None,
+)
 
 # serve ad Authlib per conservare state/nonce tra /auth/google/login e il callback
 # nome dedicato per non scontrarsi con un eventuale cookie "session" del frontend; il dominio del
