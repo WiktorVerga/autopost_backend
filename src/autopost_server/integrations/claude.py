@@ -74,7 +74,6 @@ async def generate_json(
 
     api_schema = _api_schema(schema)
     messages = [{"role": "user", "content": prompt}]
-    _print_prompt(system, prompt, api_schema)
     for attempt in range(retries + 1):
         text, info = await _request(system, messages, api_schema, max_tokens)
         try:
@@ -90,20 +89,6 @@ async def generate_json(
             "Claude output invalid, attempt %d/%d (%s): %s", attempt + 1, retries + 1, info, "; ".join(errors)
         )
     raise ClaudeError(f"Claude output is not valid ({info}): " + "; ".join(errors))
-
-
-def _print_prompt(system: System, prompt: str, api_schema: dict[str, Any]) -> None:
-    """Stampa in console il prompt completo inviato a Claude: system, messaggio utente e schema
-    dell'output strutturato (print e non logger: il logging dell'app non è configurato e sotto
-    uvicorn i messaggi info non si vedrebbero)."""
-    blocks = [system] if isinstance(system, str) else [b["text"] for b in system]
-    parts = [f"--- system[{i}] ---\n{text}" for i, text in enumerate(blocks)]
-    parts.append(f"--- user ---\n{prompt}")
-    parts.append(
-        "--- output schema (JSON Schema sent to the API, built from the format of generation.json) ---\n"
-        + json.dumps(api_schema, ensure_ascii=False, indent=2)
-    )
-    print("\n===== CLAUDE PROMPT =====\n" + "\n\n".join(parts) + "\n===== END PROMPT =====\n", flush=True)
 
 
 async def _request(
