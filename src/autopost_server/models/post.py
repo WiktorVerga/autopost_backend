@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from autopost_server.db import Base
 from autopost_server.models.column_types import pg_enum
-from autopost_server.models.enums import PostStatus
+from autopost_server.models.enums import PostStatus, PostTypeName
 
 
 class Post(Base):
@@ -21,7 +21,8 @@ class Post(Base):
         pg_enum(PostStatus, "post_status"), default=PostStatus.PENDING
     )
     caption: Mapped[str | None] = mapped_column(Text)
-    # contenuto generato da Claude (CarouselContent): salvato per non rigenerarlo dopo un errore
+    # contenuto generato da Claude, conforme al generation_schema del tipo di post: salvato per
+    # non rigenerarlo dopo un errore
     content: Mapped[dict | None] = mapped_column(JSONB)
     container_id: Mapped[str | None] = mapped_column(String(64))
     media_id: Mapped[str | None] = mapped_column(String(64))
@@ -30,10 +31,22 @@ class Post(Base):
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     idea_id: Mapped[int] = mapped_column(ForeignKey("ideas.id"))
     program_id: Mapped[int] = mapped_column(ForeignKey("programs.id"))
+    # template con cui è stato generato il contenuto (e quindi il suo tipo di post, Template.type):
+    # fissato alla generazione, così il post resta legato a template e tipo anche se il programma
+    # cambia template. NULL finché il contenuto non c'è; un template usato da un post non si elimina
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("templates.id", ondelete="RESTRICT"), index=True
+    )
 
-    idea: Mapped["Idea"] = relationship(back_populates="posts")
-    program: Mapped["Program"] = relationship(back_populates="posts")
-    slides: Mapped[list["Slide"]] = relationship(
+    idea: Mapped[Idea] = relationship(back_populates="posts")
+    program: Mapped[Program] = relationship(back_populates="posts")
+    template: Mapped[Template | None] = relationship(back_populates="posts")
+
+    @property
+    def type_name(self) -> PostTypeName | None:
+        """Il tipo di post del contenuto: quello del template con cui è stato generato."""
+        return self.template.type.name if self.template else None
+    slides: Mapped[list[Slide]] = relationship(
         back_populates="post",
         order_by="Slide.position",
         cascade="all, delete-orphan",
@@ -52,4 +65,4 @@ class Slide(Base):
     storage_key: Mapped[str] = mapped_column(String(500))
     post_id: Mapped[int] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"))
 
-    post: Mapped["Post"] = relationship(back_populates="slides")
+    post: Mapped[Post] = relationship(back_populates="slides")

@@ -1,9 +1,9 @@
 import logging
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from autopost_server.models.enums import PostStatus
+from autopost_server.models.enums import PostStatus, PostTypeName
 from autopost_server.services.storage import StorageError, presigned_url
 
 logger = logging.getLogger(__name__)
@@ -51,6 +51,10 @@ class PostRead(PostBase):
     # gestiti dalla pipeline di generazione e pubblicazione, non modificabili dal client
     status: PostStatus
     content: dict | None
+    template_id: int | None = Field(description="Template the content was generated with")
+    type: PostTypeName | None = Field(
+        validation_alias="type_name", description="Post type of the content (the template's type)"
+    )
     container_id: str | None
     media_id: str | None
     permalink: str | None

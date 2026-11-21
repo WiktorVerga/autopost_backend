@@ -1,0 +1,1861 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "autopost/templates/single-post.editables.schema.json",
+  "title": "Single post template",
+  "description": "Customization of the single-post base template (base_html.html). Every group is optional except version and postType: missing values fall back to the defaults defined here. The x-ui annotations describe how the editor builds its sidebar.",
+  "$comment": "x-ui reference. On objects: layout = section (top-level sidebar group) | subsection (collapsible block inside a section); order = position among siblings; collapsed = initial state; enabledWhen on a section disables all its controls. On fields: control = color | font | segmented | swatch | slider | select | toggle | switch | hidden; order; unit and step for sliders; cssVar = CSS custom property written on :root; cssValue = template for its value ({value}, or {family}/{fallback} for fonts) or a map from the JSON value (booleans as 'true'/'false') to the CSS value; optionsFrom = restrict a select to $defs.fontFamily.x-fontMeta[<family of fonts[<sibling fontRoleField>]>][meta]; enabledWhen = disable the control unless the condition holds: {path, equals} on another value, or {fontRoleField, meta, equals} on the font metadata; derivedFrom = value set automatically from a sibling field's font metadata; onValue/offValue = values of a toggle bound to an enum; icons = render options as icons. Visibility values become 'initial' (shown: var() falls back to the element's own value) or 'none' (hidden).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "postType"
+  ],
+  "properties": {
+    "version": {
+      "description": "Version of the JSON structure.",
+      "const": 1,
+      "default": 1,
+      "x-ui": {
+        "control": "hidden"
+      }
+    },
+    "postType": {
+      "description": "Post type the template renders.",
+      "const": "single-post",
+      "default": "single-post",
+      "x-ui": {
+        "control": "hidden"
+      }
+    },
+    "colors": {
+      "title": "Colors",
+      "description": "Fixed palette used by the whole template. Hexadecimal values.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "background": {
+          "title": "Background",
+          "description": "Post background.",
+          "$ref": "#/$defs/color",
+          "default": "#F4F1EA",
+          "x-ui": {
+            "order": 1,
+            "control": "color",
+            "cssVar": "--color-background",
+            "cssValue": "{value}"
+          }
+        },
+        "text": {
+          "title": "Text",
+          "description": "Main text.",
+          "$ref": "#/$defs/color",
+          "default": "#1B1A17",
+          "x-ui": {
+            "order": 2,
+            "control": "color",
+            "cssVar": "--color-text",
+            "cssValue": "{value}"
+          }
+        },
+        "muted": {
+          "title": "Muted",
+          "description": "Secondary text: handle, frame.",
+          "$ref": "#/$defs/color",
+          "default": "#77726A",
+          "x-ui": {
+            "order": 3,
+            "control": "color",
+            "cssVar": "--color-muted",
+            "cssValue": "{value}"
+          }
+        },
+        "accent": {
+          "title": "Accent",
+          "description": "Category label and accents.",
+          "$ref": "#/$defs/color",
+          "default": "#C2502A",
+          "x-ui": {
+            "order": 4,
+            "control": "color",
+            "cssVar": "--color-accent",
+            "cssValue": "{value}"
+          }
+        },
+        "surface": {
+          "title": "Surface",
+          "description": "Flat tinted areas: decoration backdrop, text highlight.",
+          "$ref": "#/$defs/color",
+          "default": "#E7E1D5",
+          "x-ui": {
+            "order": 5,
+            "control": "color",
+            "cssVar": "--color-surface",
+            "cssValue": "{value}"
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 1
+      },
+      "default": {
+        "background": "#F4F1EA",
+        "text": "#1B1A17",
+        "muted": "#77726A",
+        "accent": "#C2502A",
+        "surface": "#E7E1D5"
+      }
+    },
+    "fonts": {
+      "title": "Fonts",
+      "description": "Two Google Fonts from a closed list. Each typographic role picks one of them.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "heading": {
+          "title": "Heading font",
+          "description": "Default for the main text.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "family",
+            "fallback"
+          ],
+          "properties": {
+            "family": {
+              "title": "Family",
+              "description": "Google Fonts family.",
+              "$ref": "#/$defs/fontFamily",
+              "default": "Fraunces",
+              "x-ui": {
+                "order": 1,
+                "control": "font"
+              }
+            },
+            "fallback": {
+              "title": "Fallback",
+              "description": "Generic CSS family used while loading. Set automatically from the family.",
+              "$ref": "#/$defs/fontFallback",
+              "default": "serif",
+              "x-ui": {
+                "order": 2,
+                "control": "hidden",
+                "derivedFrom": {
+                  "field": "family",
+                  "meta": "category"
+                }
+              }
+            }
+          },
+          "default": {
+            "family": "Fraunces",
+            "fallback": "serif"
+          },
+          "x-ui": {
+            "order": 1,
+            "control": "font",
+            "cssVar": "--font-heading",
+            "cssValue": "\"{family}\", {fallback}"
+          }
+        },
+        "body": {
+          "title": "Body font",
+          "description": "Default for the category and the handle.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "family",
+            "fallback"
+          ],
+          "properties": {
+            "family": {
+              "title": "Family",
+              "description": "Google Fonts family.",
+              "$ref": "#/$defs/fontFamily",
+              "default": "Inter",
+              "x-ui": {
+                "order": 1,
+                "control": "font"
+              }
+            },
+            "fallback": {
+              "title": "Fallback",
+              "description": "Generic CSS family used while loading. Set automatically from the family.",
+              "$ref": "#/$defs/fontFallback",
+              "default": "sans-serif",
+              "x-ui": {
+                "order": 2,
+                "control": "hidden",
+                "derivedFrom": {
+                  "field": "family",
+                  "meta": "category"
+                }
+              }
+            }
+          },
+          "default": {
+            "family": "Inter",
+            "fallback": "sans-serif"
+          },
+          "x-ui": {
+            "order": 2,
+            "control": "font",
+            "cssVar": "--font-body",
+            "cssValue": "\"{family}\", {fallback}"
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 2
+      },
+      "default": {
+        "heading": {
+          "family": "Fraunces",
+          "fallback": "serif"
+        },
+        "body": {
+          "family": "Inter",
+          "fallback": "sans-serif"
+        }
+      }
+    },
+    "typography": {
+      "title": "Typography",
+      "description": "One group per typographic role. Every text in the template uses exactly one role.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "description": "Used by: content.text (the main line).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "font": {
+              "title": "Font",
+              "description": "Which of the two template fonts this role uses.",
+              "$ref": "#/$defs/fontRole",
+              "default": "heading",
+              "x-ui": {
+                "order": 1,
+                "control": "segmented",
+                "cssVar": "--title-font",
+                "cssValue": "var(--font-{value})"
+              }
+            },
+            "color": {
+              "title": "Color",
+              "description": "Palette color for this role.",
+              "$ref": "#/$defs/paletteColor",
+              "default": "text",
+              "x-ui": {
+                "order": 2,
+                "control": "swatch",
+                "cssVar": "--title-color",
+                "cssValue": "var(--color-{value})"
+              }
+            },
+            "size": {
+              "title": "Size",
+              "description": "Font size on a 1080×1350 post.",
+              "type": "integer",
+              "minimum": 40,
+              "maximum": 200,
+              "default": 84,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 1,
+                "cssVar": "--title-size",
+                "cssValue": "{value}px"
+              }
+            },
+            "lineHeight": {
+              "title": "Line height",
+              "description": "Unitless multiplier of the font size.",
+              "type": "number",
+              "minimum": 0.8,
+              "maximum": 2,
+              "default": 1.08,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "×",
+                "step": 0.05,
+                "cssVar": "--title-line-height",
+                "cssValue": "{value}"
+              }
+            },
+            "letterSpacing": {
+              "title": "Letter spacing",
+              "description": "Tracking in em.",
+              "type": "number",
+              "minimum": -0.1,
+              "maximum": 0.4,
+              "default": -0.02,
+              "x-ui": {
+                "order": 5,
+                "control": "slider",
+                "unit": "em",
+                "step": 0.01,
+                "cssVar": "--title-letter-spacing",
+                "cssValue": "{value}em"
+              }
+            },
+            "weight": {
+              "title": "Weight",
+              "description": "Font weight. Only the weights available in the chosen family are valid.",
+              "$ref": "#/$defs/fontWeight",
+              "default": 500,
+              "x-ui": {
+                "order": 6,
+                "control": "select",
+                "optionsFrom": {
+                  "fontRoleField": "font",
+                  "meta": "weights"
+                },
+                "cssVar": "--title-weight",
+                "cssValue": "{value}"
+              }
+            },
+            "style": {
+              "title": "Italic",
+              "description": "Italic or normal. Disabled when the chosen family has no italic.",
+              "$ref": "#/$defs/fontStyle",
+              "default": "normal",
+              "x-ui": {
+                "order": 7,
+                "control": "toggle",
+                "onValue": "italic",
+                "offValue": "normal",
+                "enabledWhen": {
+                  "fontRoleField": "font",
+                  "meta": "italic",
+                  "equals": true
+                },
+                "cssVar": "--title-style",
+                "cssValue": "{value}"
+              }
+            },
+            "transform": {
+              "title": "Case",
+              "description": "Text transform.",
+              "$ref": "#/$defs/textTransform",
+              "default": "none",
+              "x-ui": {
+                "order": 8,
+                "control": "segmented",
+                "cssVar": "--title-transform",
+                "cssValue": "{value}"
+              }
+            },
+            "align": {
+              "title": "Alignment",
+              "description": "Horizontal text alignment.",
+              "$ref": "#/$defs/textAlign",
+              "default": "center",
+              "x-ui": {
+                "order": 9,
+                "control": "segmented",
+                "icons": true,
+                "cssVar": "--title-align",
+                "cssValue": "{value}"
+              }
+            }
+          },
+          "default": {
+            "font": "heading",
+            "color": "text",
+            "size": 84,
+            "lineHeight": 1.08,
+            "letterSpacing": -0.02,
+            "weight": 500,
+            "style": "normal",
+            "transform": "none",
+            "align": "center"
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 1,
+            "collapsed": false
+          }
+        },
+        "kicker": {
+          "title": "Kicker",
+          "description": "Used by: category (label above the text).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "font": {
+              "title": "Font",
+              "description": "Which of the two template fonts this role uses.",
+              "$ref": "#/$defs/fontRole",
+              "default": "body",
+              "x-ui": {
+                "order": 1,
+                "control": "segmented",
+                "cssVar": "--kicker-font",
+                "cssValue": "var(--font-{value})"
+              }
+            },
+            "color": {
+              "title": "Color",
+              "description": "Palette color for this role.",
+              "$ref": "#/$defs/paletteColor",
+              "default": "accent",
+              "x-ui": {
+                "order": 2,
+                "control": "swatch",
+                "cssVar": "--kicker-color",
+                "cssValue": "var(--color-{value})"
+              }
+            },
+            "size": {
+              "title": "Size",
+              "description": "Font size on a 1080×1350 post.",
+              "type": "integer",
+              "minimum": 14,
+              "maximum": 48,
+              "default": 22,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 1,
+                "cssVar": "--kicker-size",
+                "cssValue": "{value}px"
+              }
+            },
+            "lineHeight": {
+              "title": "Line height",
+              "description": "Unitless multiplier of the font size.",
+              "type": "number",
+              "minimum": 0.8,
+              "maximum": 2,
+              "default": 1.2,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "×",
+                "step": 0.05,
+                "cssVar": "--kicker-line-height",
+                "cssValue": "{value}"
+              }
+            },
+            "letterSpacing": {
+              "title": "Letter spacing",
+              "description": "Tracking in em.",
+              "type": "number",
+              "minimum": -0.1,
+              "maximum": 0.4,
+              "default": 0.16,
+              "x-ui": {
+                "order": 5,
+                "control": "slider",
+                "unit": "em",
+                "step": 0.01,
+                "cssVar": "--kicker-letter-spacing",
+                "cssValue": "{value}em"
+              }
+            },
+            "weight": {
+              "title": "Weight",
+              "description": "Font weight. Only the weights available in the chosen family are valid.",
+              "$ref": "#/$defs/fontWeight",
+              "default": 700,
+              "x-ui": {
+                "order": 6,
+                "control": "select",
+                "optionsFrom": {
+                  "fontRoleField": "font",
+                  "meta": "weights"
+                },
+                "cssVar": "--kicker-weight",
+                "cssValue": "{value}"
+              }
+            },
+            "style": {
+              "title": "Italic",
+              "description": "Italic or normal. Disabled when the chosen family has no italic.",
+              "$ref": "#/$defs/fontStyle",
+              "default": "normal",
+              "x-ui": {
+                "order": 7,
+                "control": "toggle",
+                "onValue": "italic",
+                "offValue": "normal",
+                "enabledWhen": {
+                  "fontRoleField": "font",
+                  "meta": "italic",
+                  "equals": true
+                },
+                "cssVar": "--kicker-style",
+                "cssValue": "{value}"
+              }
+            },
+            "transform": {
+              "title": "Case",
+              "description": "Text transform.",
+              "$ref": "#/$defs/textTransform",
+              "default": "uppercase",
+              "x-ui": {
+                "order": 8,
+                "control": "segmented",
+                "cssVar": "--kicker-transform",
+                "cssValue": "{value}"
+              }
+            },
+            "align": {
+              "title": "Alignment",
+              "description": "Horizontal text alignment.",
+              "$ref": "#/$defs/textAlign",
+              "default": "center",
+              "x-ui": {
+                "order": 9,
+                "control": "segmented",
+                "icons": true,
+                "cssVar": "--kicker-align",
+                "cssValue": "{value}"
+              }
+            }
+          },
+          "default": {
+            "font": "body",
+            "color": "accent",
+            "size": 22,
+            "lineHeight": 1.2,
+            "letterSpacing": 0.16,
+            "weight": 700,
+            "style": "normal",
+            "transform": "uppercase",
+            "align": "center"
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 2,
+            "collapsed": true
+          }
+        },
+        "meta": {
+          "title": "Meta",
+          "description": "Used by: handle.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "font": {
+              "title": "Font",
+              "description": "Which of the two template fonts this role uses.",
+              "$ref": "#/$defs/fontRole",
+              "default": "body",
+              "x-ui": {
+                "order": 1,
+                "control": "segmented",
+                "cssVar": "--meta-font",
+                "cssValue": "var(--font-{value})"
+              }
+            },
+            "color": {
+              "title": "Color",
+              "description": "Palette color for this role.",
+              "$ref": "#/$defs/paletteColor",
+              "default": "muted",
+              "x-ui": {
+                "order": 2,
+                "control": "swatch",
+                "cssVar": "--meta-color",
+                "cssValue": "var(--color-{value})"
+              }
+            },
+            "size": {
+              "title": "Size",
+              "description": "Font size on a 1080×1350 post.",
+              "type": "integer",
+              "minimum": 14,
+              "maximum": 40,
+              "default": 20,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 1,
+                "cssVar": "--meta-size",
+                "cssValue": "{value}px"
+              }
+            },
+            "lineHeight": {
+              "title": "Line height",
+              "description": "Unitless multiplier of the font size.",
+              "type": "number",
+              "minimum": 0.8,
+              "maximum": 2,
+              "default": 1.2,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "×",
+                "step": 0.05,
+                "cssVar": "--meta-line-height",
+                "cssValue": "{value}"
+              }
+            },
+            "letterSpacing": {
+              "title": "Letter spacing",
+              "description": "Tracking in em.",
+              "type": "number",
+              "minimum": -0.1,
+              "maximum": 0.4,
+              "default": 0.08,
+              "x-ui": {
+                "order": 5,
+                "control": "slider",
+                "unit": "em",
+                "step": 0.01,
+                "cssVar": "--meta-letter-spacing",
+                "cssValue": "{value}em"
+              }
+            },
+            "weight": {
+              "title": "Weight",
+              "description": "Font weight. Only the weights available in the chosen family are valid.",
+              "$ref": "#/$defs/fontWeight",
+              "default": 500,
+              "x-ui": {
+                "order": 6,
+                "control": "select",
+                "optionsFrom": {
+                  "fontRoleField": "font",
+                  "meta": "weights"
+                },
+                "cssVar": "--meta-weight",
+                "cssValue": "{value}"
+              }
+            },
+            "style": {
+              "title": "Italic",
+              "description": "Italic or normal. Disabled when the chosen family has no italic.",
+              "$ref": "#/$defs/fontStyle",
+              "default": "normal",
+              "x-ui": {
+                "order": 7,
+                "control": "toggle",
+                "onValue": "italic",
+                "offValue": "normal",
+                "enabledWhen": {
+                  "fontRoleField": "font",
+                  "meta": "italic",
+                  "equals": true
+                },
+                "cssVar": "--meta-style",
+                "cssValue": "{value}"
+              }
+            },
+            "transform": {
+              "title": "Case",
+              "description": "Text transform.",
+              "$ref": "#/$defs/textTransform",
+              "default": "uppercase",
+              "x-ui": {
+                "order": 8,
+                "control": "segmented",
+                "cssVar": "--meta-transform",
+                "cssValue": "{value}"
+              }
+            },
+            "align": {
+              "title": "Alignment",
+              "description": "Horizontal text alignment.",
+              "$ref": "#/$defs/textAlign",
+              "default": "center",
+              "x-ui": {
+                "order": 9,
+                "control": "segmented",
+                "icons": true,
+                "cssVar": "--meta-align",
+                "cssValue": "{value}"
+              }
+            }
+          },
+          "default": {
+            "font": "body",
+            "color": "muted",
+            "size": 20,
+            "lineHeight": 1.2,
+            "letterSpacing": 0.08,
+            "weight": 500,
+            "style": "normal",
+            "transform": "uppercase",
+            "align": "center"
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 3,
+            "collapsed": true
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 3
+      },
+      "default": {
+        "title": {
+          "font": "heading",
+          "color": "text",
+          "size": 84,
+          "lineHeight": 1.08,
+          "letterSpacing": -0.02,
+          "weight": 500,
+          "style": "normal",
+          "transform": "none",
+          "align": "center"
+        },
+        "kicker": {
+          "font": "body",
+          "color": "accent",
+          "size": 22,
+          "lineHeight": 1.2,
+          "letterSpacing": 0.16,
+          "weight": 700,
+          "style": "normal",
+          "transform": "uppercase",
+          "align": "center"
+        },
+        "meta": {
+          "font": "body",
+          "color": "muted",
+          "size": 20,
+          "lineHeight": 1.2,
+          "letterSpacing": 0.08,
+          "weight": 500,
+          "style": "normal",
+          "transform": "uppercase",
+          "align": "center"
+        }
+      }
+    },
+    "spacing": {
+      "title": "Spacing",
+      "description": "Padding and margin per element, editable on the X and Y axes.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "description": "Main text.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paddingX": {
+              "title": "Padding X",
+              "description": "Inner space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 1,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--title-padding-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "paddingY": {
+              "title": "Padding Y",
+              "description": "Inner space top and bottom.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 2,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--title-padding-y",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginX": {
+              "title": "Margin X",
+              "description": "Outer space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--title-margin-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginY": {
+              "title": "Margin Y",
+              "description": "Outer space top and bottom (adds up between stacked elements).",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--title-margin-y",
+                "cssValue": "{value}px"
+              }
+            }
+          },
+          "default": {
+            "paddingX": 0,
+            "paddingY": 0,
+            "marginX": 0,
+            "marginY": 0
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 1,
+            "collapsed": false
+          }
+        },
+        "kicker": {
+          "title": "Kicker",
+          "description": "Category label.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paddingX": {
+              "title": "Padding X",
+              "description": "Inner space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 1,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--kicker-padding-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "paddingY": {
+              "title": "Padding Y",
+              "description": "Inner space top and bottom.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 2,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--kicker-padding-y",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginX": {
+              "title": "Margin X",
+              "description": "Outer space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--kicker-margin-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginY": {
+              "title": "Margin Y",
+              "description": "Outer space top and bottom (adds up between stacked elements).",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 28,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--kicker-margin-y",
+                "cssValue": "{value}px"
+              }
+            }
+          },
+          "default": {
+            "paddingX": 0,
+            "paddingY": 0,
+            "marginX": 0,
+            "marginY": 28
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 2,
+            "collapsed": true
+          }
+        },
+        "meta": {
+          "title": "Meta",
+          "description": "Handle.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paddingX": {
+              "title": "Padding X",
+              "description": "Inner space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 1,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--meta-padding-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "paddingY": {
+              "title": "Padding Y",
+              "description": "Inner space top and bottom.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 2,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--meta-padding-y",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginX": {
+              "title": "Margin X",
+              "description": "Outer space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--meta-margin-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginY": {
+              "title": "Margin Y",
+              "description": "Outer space top and bottom (adds up between stacked elements).",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--meta-margin-y",
+                "cssValue": "{value}px"
+              }
+            }
+          },
+          "default": {
+            "paddingX": 0,
+            "paddingY": 0,
+            "marginX": 0,
+            "marginY": 0
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 3,
+            "collapsed": true
+          }
+        },
+        "decoration": {
+          "title": "Decoration",
+          "description": "SVG decoration box.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paddingX": {
+              "title": "Padding X",
+              "description": "Inner space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 1,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--decoration-padding-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "paddingY": {
+              "title": "Padding Y",
+              "description": "Inner space top and bottom.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 2,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--decoration-padding-y",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginX": {
+              "title": "Margin X",
+              "description": "Outer space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--decoration-margin-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginY": {
+              "title": "Margin Y",
+              "description": "Outer space top and bottom (adds up between stacked elements).",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 32,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--decoration-margin-y",
+                "cssValue": "{value}px"
+              }
+            }
+          },
+          "default": {
+            "paddingX": 0,
+            "paddingY": 0,
+            "marginX": 0,
+            "marginY": 32
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 4,
+            "collapsed": true
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 4
+      },
+      "default": {
+        "title": {
+          "paddingX": 0,
+          "paddingY": 0,
+          "marginX": 0,
+          "marginY": 0
+        },
+        "kicker": {
+          "paddingX": 0,
+          "paddingY": 0,
+          "marginX": 0,
+          "marginY": 28
+        },
+        "meta": {
+          "paddingX": 0,
+          "paddingY": 0,
+          "marginX": 0,
+          "marginY": 0
+        },
+        "decoration": {
+          "paddingX": 0,
+          "paddingY": 0,
+          "marginX": 0,
+          "marginY": 32
+        }
+      }
+    },
+    "decoration": {
+      "title": "Decoration",
+      "description": "Size, placement and colors of the SVG decoration generated with each post. The SVG colors itself through --art-line, --art-paper and --art-fill.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "size": {
+          "title": "Size",
+          "description": "Side of the square box the SVG is fitted into.",
+          "type": "integer",
+          "minimum": 160,
+          "maximum": 900,
+          "default": 440,
+          "x-ui": {
+            "order": 1,
+            "control": "slider",
+            "unit": "px",
+            "step": 4,
+            "cssVar": "--decoration-size",
+            "cssValue": "{value}px"
+          }
+        },
+        "position": {
+          "title": "Position",
+          "description": "Decoration above or below the text.",
+          "$ref": "#/$defs/stackPosition",
+          "default": "above",
+          "x-ui": {
+            "order": 2,
+            "control": "segmented",
+            "cssVar": "--decoration-order",
+            "cssValue": {
+              "above": "-1",
+              "below": "1"
+            }
+          }
+        },
+        "align": {
+          "title": "Alignment",
+          "description": "Horizontal placement of the decoration.",
+          "$ref": "#/$defs/textAlign",
+          "default": "center",
+          "x-ui": {
+            "order": 3,
+            "control": "segmented",
+            "icons": true,
+            "cssVar": "--decoration-align",
+            "cssValue": {
+              "left": "flex-start",
+              "center": "center",
+              "right": "flex-end"
+            }
+          }
+        },
+        "lineColor": {
+          "title": "Line color",
+          "description": "Strokes of the drawing (--art-line).",
+          "$ref": "#/$defs/paletteColor",
+          "default": "text",
+          "x-ui": {
+            "order": 4,
+            "control": "swatch",
+            "cssVar": "--art-line",
+            "cssValue": "var(--color-{value})"
+          }
+        },
+        "paperColor": {
+          "title": "Paper color",
+          "description": "Light fills of the drawing (--art-paper).",
+          "$ref": "#/$defs/paletteColor",
+          "default": "background",
+          "x-ui": {
+            "order": 5,
+            "control": "swatch",
+            "cssVar": "--art-paper",
+            "cssValue": "var(--color-{value})"
+          }
+        },
+        "fillColor": {
+          "title": "Fill color",
+          "description": "Colored fills of the drawing (--art-fill).",
+          "$ref": "#/$defs/paletteColor",
+          "default": "accent",
+          "x-ui": {
+            "order": 6,
+            "control": "swatch",
+            "cssVar": "--art-fill",
+            "cssValue": "var(--color-{value})"
+          }
+        },
+        "backdropColor": {
+          "title": "Backdrop color",
+          "description": "Flat shape behind the drawing.",
+          "$ref": "#/$defs/paletteColor",
+          "default": "surface",
+          "x-ui": {
+            "order": 7,
+            "control": "swatch",
+            "cssVar": "--decoration-backdrop-color",
+            "cssValue": "var(--color-{value})",
+            "enabledWhen": {
+              "path": "visibility.decoration.backdrop",
+              "equals": true
+            }
+          }
+        },
+        "backdropShape": {
+          "title": "Backdrop shape",
+          "description": "Shape of the backdrop.",
+          "$ref": "#/$defs/backdropShape",
+          "default": "circle",
+          "x-ui": {
+            "order": 8,
+            "control": "segmented",
+            "cssVar": "--decoration-backdrop-radius",
+            "cssValue": {
+              "circle": "50%",
+              "rounded": "12%",
+              "square": "0"
+            },
+            "enabledWhen": {
+              "path": "visibility.decoration.backdrop",
+              "equals": true
+            }
+          }
+        },
+        "backdropScale": {
+          "title": "Backdrop scale",
+          "description": "Backdrop size relative to the decoration box.",
+          "type": "number",
+          "minimum": 0.3,
+          "maximum": 1.2,
+          "default": 0.86,
+          "x-ui": {
+            "order": 9,
+            "control": "slider",
+            "unit": "×",
+            "step": 0.02,
+            "cssVar": "--decoration-backdrop-scale",
+            "cssValue": "{value}",
+            "enabledWhen": {
+              "path": "visibility.decoration.backdrop",
+              "equals": true
+            }
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 5,
+        "enabledWhen": {
+          "path": "visibility.decoration.artwork",
+          "equals": true
+        }
+      },
+      "default": {
+        "size": 440,
+        "position": "above",
+        "align": "center",
+        "lineColor": "text",
+        "paperColor": "background",
+        "fillColor": "accent",
+        "backdropColor": "surface",
+        "backdropShape": "circle",
+        "backdropScale": 0.86
+      }
+    },
+    "layout": {
+      "title": "Layout",
+      "description": "Post-level spacing and placement.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "paddingX": {
+          "title": "Padding X",
+          "description": "Left and right inner space of the post.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 240,
+          "default": 96,
+          "x-ui": {
+            "order": 1,
+            "control": "slider",
+            "unit": "px",
+            "step": 2,
+            "cssVar": "--layout-padding-x",
+            "cssValue": "{value}px"
+          }
+        },
+        "paddingY": {
+          "title": "Padding Y",
+          "description": "Top and bottom inner space of the post.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 240,
+          "default": 80,
+          "x-ui": {
+            "order": 2,
+            "control": "slider",
+            "unit": "px",
+            "step": 2,
+            "cssVar": "--layout-padding-y",
+            "cssValue": "{value}px"
+          }
+        },
+        "contentPosition": {
+          "title": "Content position",
+          "description": "Vertical placement of decoration, category and text.",
+          "$ref": "#/$defs/verticalPosition",
+          "default": "center",
+          "x-ui": {
+            "order": 3,
+            "control": "segmented",
+            "icons": true,
+            "cssVar": "--layout-content-position",
+            "cssValue": {
+              "top": "flex-start",
+              "center": "center",
+              "bottom": "flex-end"
+            }
+          }
+        },
+        "frameInset": {
+          "title": "Frame inset",
+          "description": "Distance of the frame from the edge.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 120,
+          "default": 28,
+          "x-ui": {
+            "order": 4,
+            "control": "slider",
+            "unit": "px",
+            "step": 2,
+            "cssVar": "--layout-frame-inset",
+            "cssValue": "{value}px",
+            "enabledWhen": {
+              "path": "visibility.extras.frame",
+              "equals": true
+            }
+          }
+        },
+        "frameWidth": {
+          "title": "Frame width",
+          "description": "Stroke width of the frame.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "default": 2,
+          "x-ui": {
+            "order": 5,
+            "control": "slider",
+            "unit": "px",
+            "step": 1,
+            "cssVar": "--layout-frame-width",
+            "cssValue": "{value}px",
+            "enabledWhen": {
+              "path": "visibility.extras.frame",
+              "equals": true
+            }
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 6
+      },
+      "default": {
+        "paddingX": 96,
+        "paddingY": 80,
+        "contentPosition": "center",
+        "frameInset": 28,
+        "frameWidth": 2
+      }
+    },
+    "visibility": {
+      "title": "Visibility",
+      "description": "Show (true) or hide (false) optional elements and decorations.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "description": "Category and main text.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "category": {
+              "title": "Category",
+              "description": "Category label above the text.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 1,
+                "control": "switch",
+                "cssVar": "--show-text-category",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "categoryRule": {
+              "title": "Category rule",
+              "description": "Short line before the category.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 2,
+                "control": "switch",
+                "cssVar": "--show-text-category-rule",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                },
+                "enabledWhen": {
+                  "path": "visibility.text.category",
+                  "equals": true
+                }
+              }
+            },
+            "quoteMarks": {
+              "title": "Quote marks",
+              "description": "Typographic quotes around the text.",
+              "type": "boolean",
+              "default": false,
+              "x-ui": {
+                "order": 3,
+                "control": "switch",
+                "cssVar": "--show-text-quote-marks",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "highlight": {
+              "title": "Highlight",
+              "description": "Surface-colored marker band behind the text.",
+              "type": "boolean",
+              "default": false,
+              "x-ui": {
+                "order": 4,
+                "control": "switch",
+                "cssVar": "--show-text-highlight",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            }
+          },
+          "default": {
+            "category": true,
+            "categoryRule": true,
+            "quoteMarks": false,
+            "highlight": false
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 1,
+            "collapsed": false
+          }
+        },
+        "decoration": {
+          "title": "Decoration",
+          "description": "SVG decoration.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "artwork": {
+              "title": "Decoration",
+              "description": "The SVG generated with the post.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 1,
+                "control": "switch",
+                "cssVar": "--show-decoration-artwork",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "backdrop": {
+              "title": "Backdrop",
+              "description": "Flat shape behind the drawing.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 2,
+                "control": "switch",
+                "cssVar": "--show-decoration-backdrop",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                },
+                "enabledWhen": {
+                  "path": "visibility.decoration.artwork",
+                  "equals": true
+                }
+              }
+            }
+          },
+          "default": {
+            "artwork": true,
+            "backdrop": true
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 2,
+            "collapsed": false
+          }
+        },
+        "extras": {
+          "title": "Extras",
+          "description": "Elements around the content.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "handle": {
+              "title": "Handle",
+              "description": "Instagram handle at the bottom.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 1,
+                "control": "switch",
+                "cssVar": "--show-extras-handle",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "frame": {
+              "title": "Frame",
+              "description": "Thin border inset from the edge.",
+              "type": "boolean",
+              "default": false,
+              "x-ui": {
+                "order": 2,
+                "control": "switch",
+                "cssVar": "--show-extras-frame",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            }
+          },
+          "default": {
+            "handle": true,
+            "frame": false
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 3,
+            "collapsed": false
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 7
+      },
+      "default": {
+        "text": {
+          "category": true,
+          "categoryRule": true,
+          "quoteMarks": false,
+          "highlight": false
+        },
+        "decoration": {
+          "artwork": true,
+          "backdrop": true
+        },
+        "extras": {
+          "handle": true,
+          "frame": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "color": {
+      "type": "string",
+      "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+    },
+    "fontFamily": {
+      "type": "string",
+      "enum": [
+        "Inter",
+        "Space Grotesk",
+        "IBM Plex Mono",
+        "Fraunces",
+        "Playfair Display",
+        "DM Serif Display"
+      ],
+      "x-fontMeta": {
+        "Inter": {
+          "category": "sans-serif",
+          "weights": [
+            100,
+            200,
+            300,
+            400,
+            500,
+            600,
+            700,
+            800,
+            900
+          ],
+          "italic": true
+        },
+        "Space Grotesk": {
+          "category": "sans-serif",
+          "weights": [
+            300,
+            400,
+            500,
+            600,
+            700
+          ],
+          "italic": false
+        },
+        "IBM Plex Mono": {
+          "category": "monospace",
+          "weights": [
+            100,
+            200,
+            300,
+            400,
+            500,
+            600,
+            700
+          ],
+          "italic": true
+        },
+        "Fraunces": {
+          "category": "serif",
+          "weights": [
+            100,
+            200,
+            300,
+            400,
+            500,
+            600,
+            700,
+            800,
+            900
+          ],
+          "italic": true
+        },
+        "Playfair Display": {
+          "category": "serif",
+          "weights": [
+            400,
+            500,
+            600,
+            700,
+            800,
+            900
+          ],
+          "italic": true
+        },
+        "DM Serif Display": {
+          "category": "serif",
+          "weights": [
+            400
+          ],
+          "italic": true
+        }
+      }
+    },
+    "fontFallback": {
+      "type": "string",
+      "enum": [
+        "serif",
+        "sans-serif",
+        "monospace"
+      ]
+    },
+    "fontRole": {
+      "oneOf": [
+        {
+          "const": "heading",
+          "title": "Heading"
+        },
+        {
+          "const": "body",
+          "title": "Body"
+        }
+      ]
+    },
+    "paletteColor": {
+      "oneOf": [
+        {
+          "const": "background",
+          "title": "Background"
+        },
+        {
+          "const": "text",
+          "title": "Text"
+        },
+        {
+          "const": "muted",
+          "title": "Muted"
+        },
+        {
+          "const": "accent",
+          "title": "Accent"
+        },
+        {
+          "const": "surface",
+          "title": "Surface"
+        }
+      ]
+    },
+    "fontWeight": {
+      "oneOf": [
+        {
+          "const": 100,
+          "title": "Thin"
+        },
+        {
+          "const": 200,
+          "title": "Extra light"
+        },
+        {
+          "const": 300,
+          "title": "Light"
+        },
+        {
+          "const": 400,
+          "title": "Regular"
+        },
+        {
+          "const": 500,
+          "title": "Medium"
+        },
+        {
+          "const": 600,
+          "title": "Semibold"
+        },
+        {
+          "const": 700,
+          "title": "Bold"
+        },
+        {
+          "const": 800,
+          "title": "Extra bold"
+        },
+        {
+          "const": 900,
+          "title": "Black"
+        }
+      ]
+    },
+    "fontStyle": {
+      "oneOf": [
+        {
+          "const": "normal",
+          "title": "Normal"
+        },
+        {
+          "const": "italic",
+          "title": "Italic"
+        }
+      ]
+    },
+    "textTransform": {
+      "oneOf": [
+        {
+          "const": "none",
+          "title": "Normal"
+        },
+        {
+          "const": "uppercase",
+          "title": "UPPERCASE"
+        },
+        {
+          "const": "lowercase",
+          "title": "lowercase"
+        },
+        {
+          "const": "capitalize",
+          "title": "Capitalize"
+        }
+      ]
+    },
+    "textAlign": {
+      "oneOf": [
+        {
+          "const": "left",
+          "title": "Left"
+        },
+        {
+          "const": "center",
+          "title": "Center"
+        },
+        {
+          "const": "right",
+          "title": "Right"
+        }
+      ]
+    },
+    "verticalPosition": {
+      "oneOf": [
+        {
+          "const": "top",
+          "title": "Top"
+        },
+        {
+          "const": "center",
+          "title": "Center"
+        },
+        {
+          "const": "bottom",
+          "title": "Bottom"
+        }
+      ]
+    },
+    "stackPosition": {
+      "oneOf": [
+        {
+          "const": "above",
+          "title": "Above text"
+        },
+        {
+          "const": "below",
+          "title": "Below text"
+        }
+      ]
+    },
+    "backdropShape": {
+      "oneOf": [
+        {
+          "const": "circle",
+          "title": "Circle"
+        },
+        {
+          "const": "rounded",
+          "title": "Rounded"
+        },
+        {
+          "const": "square",
+          "title": "Square"
+        }
+      ]
+    }
+  }
+}

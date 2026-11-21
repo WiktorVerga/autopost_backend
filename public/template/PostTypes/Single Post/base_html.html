@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Autopost · Single post · Base template</title>
+  <!--
+    AUTOPOST · SINGLE POST BASE TEMPLATE (static, sample content)
+    One image, 1080x1350. The <section class="slide"> is rendered to the image.
+
+    Everything the editor can change lives in the :root block below. It is generated
+    from defaults.json by css_vars.py, using the cssVar / cssValue mapping declared in
+    editables.schema.json (x-ui annotations).
+
+    Typographic roles (one class each, all driven by --<role>-* variables):
+      .t-title   content.text
+      .t-kicker  category
+      .t-meta    handle
+
+    Decoration: content.decoration is inline SVG. It colors itself with
+    var(--art-line), var(--art-paper), var(--art-fill), set on :root from the palette.
+    It is fitted (contain) into a square box of --decoration-size, which shrinks
+    if the text needs the room. Sanitize it before inserting it (no <script>,
+    no on* attributes, no <foreignObject>, no external href).
+
+    Visibility: every --show-* variable is either `initial` (shown) or `none` (hidden).
+    `initial` makes var() fall back to the element's own value, e.g.
+    display: var(--show-extras-handle, block). Use only these two values.
+
+    Dynamic content is marked with data-field="..." for the Jinja conversion.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link id="google-fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500&amp;family=Inter:ital,wght@0,500;0,700&amp;display=block">
+  <style>
+    /* @vars:start */
+    :root {
+      --color-background: #F4F1EA;
+      --color-text: #1B1A17;
+      --color-muted: #77726A;
+      --color-accent: #C2502A;
+      --color-surface: #E7E1D5;
+      --font-heading: "Fraunces", serif;
+      --font-body: "Inter", sans-serif;
+      --title-font: var(--font-heading);
+      --title-color: var(--color-text);
+      --title-size: 84px;
+      --title-line-height: 1.08;
+      --title-letter-spacing: -0.02em;
+      --title-weight: 500;
+      --title-style: normal;
+      --title-transform: none;
+      --title-align: center;
+      --kicker-font: var(--font-body);
+      --kicker-color: var(--color-accent);
+      --kicker-size: 22px;
+      --kicker-line-height: 1.2;
+      --kicker-letter-spacing: 0.16em;
+      --kicker-weight: 700;
+      --kicker-style: normal;
+      --kicker-transform: uppercase;
+      --kicker-align: center;
+      --meta-font: var(--font-body);
+      --meta-color: var(--color-muted);
+      --meta-size: 20px;
+      --meta-line-height: 1.2;
+      --meta-letter-spacing: 0.08em;
+      --meta-weight: 500;
+      --meta-style: normal;
+      --meta-transform: uppercase;
+      --meta-align: center;
+      --title-padding-x: 0px;
+      --title-padding-y: 0px;
+      --title-margin-x: 0px;
+      --title-margin-y: 0px;
+      --kicker-padding-x: 0px;
+      --kicker-padding-y: 0px;
+      --kicker-margin-x: 0px;
+      --kicker-margin-y: 28px;
+      --meta-padding-x: 0px;
+      --meta-padding-y: 0px;
+      --meta-margin-x: 0px;
+      --meta-margin-y: 0px;
+      --decoration-padding-x: 0px;
+      --decoration-padding-y: 0px;
+      --decoration-margin-x: 0px;
+      --decoration-margin-y: 32px;
+      --decoration-size: 440px;
+      --decoration-order: -1;
+      --decoration-align: center;
+      --art-line: var(--color-text);
+      --art-paper: var(--color-background);
+      --art-fill: var(--color-accent);
+      --decoration-backdrop-color: var(--color-surface);
+      --decoration-backdrop-radius: 50%;
+      --decoration-backdrop-scale: 0.86;
+      --layout-padding-x: 96px;
+      --layout-padding-y: 80px;
+      --layout-content-position: center;
+      --layout-frame-inset: 28px;
+      --layout-frame-width: 2px;
+      --show-text-category: initial;
+      --show-text-category-rule: initial;
+      --show-text-quote-marks: none;
+      --show-text-highlight: none;
+      --show-decoration-artwork: initial;
+      --show-decoration-backdrop: initial;
+      --show-extras-handle: initial;
+      --show-extras-frame: none;
+    }
+    /* @vars:end */
+
+    /* ---------- reset ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; }
+    h1, p { margin: 0; padding: 0; }
+
+    body {
+      background: #2B2B2B;
+      display: flex;
+      justify-content: center;
+      padding: 48px 0;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      font-optical-sizing: auto;
+    }
+
+    /* ---------- post ---------- */
+    .slide {
+      position: relative;
+      width: 1080px;
+      height: 1350px;
+      flex: none;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: var(--layout-padding-y) var(--layout-padding-x);
+      background: var(--color-background);
+      color: var(--color-text);
+      font-family: var(--font-body);
+    }
+
+    .post {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: var(--layout-content-position);
+    }
+
+    .slide__footer {
+      position: relative;
+      z-index: 1;
+      flex: none;
+    }
+
+    /* ---------- typographic roles ---------- */
+    .t-title {
+      font-family: var(--title-font);
+      color: var(--title-color);
+      font-size: var(--title-size);
+      line-height: var(--title-line-height);
+      letter-spacing: var(--title-letter-spacing);
+      font-weight: var(--title-weight);
+      font-style: var(--title-style);
+      text-transform: var(--title-transform);
+      text-align: var(--title-align);
+      padding: var(--title-padding-y) var(--title-padding-x);
+      margin: var(--title-margin-y) var(--title-margin-x);
+      text-wrap: balance;
+    }
+
+    .t-kicker {
+      font-family: var(--kicker-font);
+      color: var(--kicker-color);
+      font-size: var(--kicker-size);
+      line-height: var(--kicker-line-height);
+      letter-spacing: var(--kicker-letter-spacing);
+      font-weight: var(--kicker-weight);
+      font-style: var(--kicker-style);
+      text-transform: var(--kicker-transform);
+      text-align: var(--kicker-align);
+      padding: var(--kicker-padding-y) var(--kicker-padding-x);
+      margin: var(--kicker-margin-y) var(--kicker-margin-x);
+    }
+
+    .t-meta {
+      font-family: var(--meta-font);
+      color: var(--meta-color);
+      font-size: var(--meta-size);
+      line-height: var(--meta-line-height);
+      letter-spacing: var(--meta-letter-spacing);
+      font-weight: var(--meta-weight);
+      font-style: var(--meta-style);
+      text-transform: var(--meta-transform);
+      text-align: var(--meta-align);
+      padding: var(--meta-padding-y) var(--meta-padding-x);
+      margin: var(--meta-margin-y) var(--meta-margin-x);
+    }
+
+    /* ---------- decoration ---------- */
+    .decoration {
+      display: var(--show-decoration-artwork, block);
+      order: var(--decoration-order);
+      align-self: var(--decoration-align);
+      position: relative;
+      box-sizing: content-box;
+      width: var(--decoration-size);
+      height: var(--decoration-size);
+      max-width: 100%;
+      flex: 0 1 auto;     /* gives height back to the text when it runs long */
+      min-height: 120px;
+      padding: var(--decoration-padding-y) var(--decoration-padding-x);
+      margin: var(--decoration-margin-y) var(--decoration-margin-x);
+    }
+    .decoration__backdrop {
+      display: var(--show-decoration-backdrop, block);
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      height: calc(100% * var(--decoration-backdrop-scale));
+      aspect-ratio: 1;
+      translate: -50% -50%;
+      border-radius: var(--decoration-backdrop-radius);
+      background: var(--decoration-backdrop-color);
+    }
+    .decoration__box,
+    .decoration__art {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    .decoration__art > svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    /* ---------- text ---------- */
+    .kicker { display: var(--show-text-category, block); }
+    .kicker-rule {
+      display: var(--show-text-category-rule, inline-block);
+      width: 40px;
+      height: 3px;
+      margin-right: 16px;
+      vertical-align: middle;
+      position: relative;
+      top: -0.1em;
+      background: currentColor;
+    }
+
+    .post-text__inner {
+      /* `none` → background-image: none */
+      background-image: var(--show-text-highlight,
+        linear-gradient(to bottom, transparent 58%, var(--color-surface) 58%, var(--color-surface) 92%, transparent 92%));
+      -webkit-box-decoration-break: clone;
+      box-decoration-break: clone;
+      padding: 0 0.08em;
+    }
+    .post-text__inner::before { content: var(--show-text-quote-marks, "“"); }
+    .post-text__inner::after  { content: var(--show-text-quote-marks, "”"); }
+
+    /* ---------- extras ---------- */
+    .handle { display: var(--show-extras-handle, block); }
+
+    .frame {
+      display: var(--show-extras-frame, block);
+      position: absolute;
+      inset: var(--layout-frame-inset);
+      border: var(--layout-frame-width) solid var(--color-muted);
+      pointer-events: none;
+      z-index: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <section class="slide slide--single-post" data-type="single-post">
+    <div class="frame" aria-hidden="true"></div>
+
+    <main class="post">
+      <div class="decoration" aria-hidden="true">
+        <div class="decoration__box">
+        <div class="decoration__backdrop"></div>
+        <div class="decoration__art" data-field="content.decoration"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 335 450' fill='none' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(-41.2 28.0)'><path d='M 280 262 C 356 244 362 362 268 352' fill='none' stroke='var(--art-line, #15110e)' stroke-width='28'/><path d='M 280 262 C 356 244 362 362 268 352' fill='none' stroke='var(--art-paper, #ffffff)' stroke-width='12'/><path d='M 60 200 C 57 290 64 350 84 382 C 96 400 120 404 175 404 C 230 404 254 400 266 382 C 286 350 293 290 290 200 Z' fill='var(--art-paper, #ffffff)' stroke='var(--art-line, #15110e)' stroke-width='8'/><ellipse cx='175' cy='200' rx='115' ry='27' fill='var(--art-fill, #d2a369)' stroke='var(--art-line, #15110e)' stroke-width='8'/><path d='M 100 210 C 140 220 214 220 252 208' fill='none' stroke='var(--art-paper, #ffffff)' stroke-width='8' opacity='0.35'/><path d='M 100 286 h 44' fill='none' stroke='var(--art-line, #15110e)' stroke-width='8'/><path d='M 108 290 a 14 14 0 0 0 28 0 z' fill='var(--art-line, #15110e)'/><path d='M 196 286 h 44' fill='none' stroke='var(--art-line, #15110e)' stroke-width='8'/><path d='M 204 290 a 14 14 0 0 0 28 0 z' fill='var(--art-line, #15110e)'/><ellipse cx='170' cy='330' rx='8' ry='7' fill='var(--art-line, #15110e)'/><ellipse cx='88' cy='322' rx='16' ry='9' fill='var(--art-fill, #d2a369)' opacity='0.6'/><ellipse cx='252' cy='322' rx='16' ry='9' fill='var(--art-fill, #d2a369)' opacity='0.6'/><path d='M 150 150 C 126 126 176 112 156 84 C 148 72 152 62 160 54' fill='none' stroke='var(--art-line, #15110e)' stroke-width='8'/><path d='M 214 104 h 22 l -22 22 h 22' fill='none' stroke='var(--art-line, #15110e)' stroke-width='8'/><path d='M 262 52 h 30 l -30 30 h 30' fill='none' stroke='var(--art-line, #15110e)' stroke-width='8'/><path d='M 318 -10 h 40 l -40 40 h 40' fill='none' stroke='var(--art-line, #15110e)' stroke-width='8'/></g></svg></div>
+        </div>
+      </div>
+
+      <p class="t-kicker kicker"><span class="kicker-rule" aria-hidden="true"></span><span data-field="category">Morning coffee</span></p>
+      <h1 class="t-title post-text"><span class="post-text__inner" data-field="content.text">I'll be nice in one cup</span></h1>
+    </main>
+
+    <footer class="slide__footer">
+      <p class="t-meta handle" data-field="handle">@coffee_extracts</p>
+    </footer>
+  </section>
+
+</body>
+</html>

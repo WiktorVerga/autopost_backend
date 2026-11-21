@@ -19,3 +19,12 @@ media/
 
 #.env da deploy/
 deploy/.env
+
+# Certificati TLS locali (mkcert) per uvicorn --ssl-*
+*.pem
+
+# Dump di crash di Git Bash
+*.stackdump
+
+# Frontend: progetto separato, non fa parte di questa repo
+autopost-frontend/

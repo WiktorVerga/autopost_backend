@@ -1,6 +1,6 @@
-"""Rendering delle slide di un post: dal contenuto (carousel.json) alle immagini JPEG.
+"""Rendering delle slide di un post: dal contenuto generato da Claude alle immagini JPEG.
 
-Le slide si disegnano con il template Jinja collegato al programma del post
+Le slide si disegnano con il template Jinja del post
 (Template.jinja_content, generato da services/templates.compile_definition): riempito con il
 contenuto del post diventa l'HTML della pagina, che si apre in Chromium (Playwright) nella stessa
 sandbox delle anteprime dei template; ogni slide si cattura come immagine 1080 × 1350.
@@ -92,7 +92,7 @@ _ASSETS_DIR = (PROJECT_ROOT / "public" / "template").resolve()
 # ciò che sfugge al routing (WebSocket, richieste del browser) finisce su un proxy inesistente
 _SANDBOX_ARGS = ["--proxy-server=http://127.0.0.1:9", "--proxy-bypass-list=<-loopback>"]
 _MAX_PREVIEW_SLIDES = 20
-# le slide dei template: .slide (carousel.html) e .t-slide (basi in public/template/default templates)
+# le slide dei template: .slide (basi dei tipi di post) e .t-slide (basi precedenti in public/template/default templates)
 _SLIDE_SELECTOR = ".slide, .t-slide"
 # unica rete concessa: i Google Fonts delle basi, scaricati da Playwright (non dal browser, che
 # ha il proxy inesistente) e serviti alla pagina
@@ -176,7 +176,7 @@ def _sandbox_page(html: str, width: int, height: int) -> Iterator[tuple[Page, li
 def _fill_template(jinja_content: str, content: dict) -> str:
     """Il template Jinja del programma riempito con il contenuto del post: l'HTML da disegnare.
 
-    Il template riceve il contenuto come unica variabile `data` ({"handle": ..., "slides": [...]}).
+    Il template riceve il contenuto come unica variabile `data` (il contenuto con "handle").
     """
     # import locale: services.templates importa questo modulo
     from autopost_server.services.templates import TemplateValidationError, render_jinja
@@ -187,14 +187,15 @@ def _fill_template(jinja_content: str, content: dict) -> str:
         raise PreviewError(str(e)) from e
 
 
-def render_slides(post_id: int, content: dict, jinja_content: str) -> RenderResult:
-    """Disegna il contenuto del post con il template Jinja `jinja_content` (quello del
-    programma), crea un JPEG per slide e lo carica su R2 (posts/<post_id>/slide-1.jpg, ...).
+def render_slides(post_id: int, content: dict, jinja_content: str, expected: int) -> RenderResult:
+    """Disegna il contenuto del post con il template Jinja `jinja_content` (quello del post),
+    crea un JPEG per slide e lo carica su R2 (posts/<post_id>/slide-1.jpg, ...).
 
+    `expected` è il numero di immagini che il contenuto deve produrre (templates.page_count):
+    una per slide, o una sola per i tipi di post senza slide.
     Sincrona e lenta (avvia un browser e carica le immagini): dal codice asincrono va chiamata
     con asyncio.to_thread.
     """
-    expected = len(content.get("slides") or [])
     if expected == 0:
         raise RenderError("The post content has no slides")
 

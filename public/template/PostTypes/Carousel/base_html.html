@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Autopost · Carousel · Base template</title>
+  <!--
+    AUTOPOST · CAROUSEL BASE TEMPLATE (static, sample content)
+    Slides 1080x1350. Each <section class="slide"> is rendered to one image.
+
+    Everything the editor can change lives in the :root block below. It is generated
+    from defaults.json by css_vars.py, using the cssVar / cssValue mapping declared in
+    carousel.schema.json (x-ui annotations).
+
+    Typographic roles (one class each, all driven by --<role>-* variables):
+      .t-title .t-subtitle .t-body .t-kicker .t-number .t-meta
+    Role used by each schema field:
+      title    cover.title · text.title · steps.title · compare.title · myth.myth · tip.tip · closing.title
+      subtitle cover.subtitle · number.caption · steps[].title · compare.*.label
+      body     text.body · number.body · steps[].text · compare.*.items · myth.fact · tip.note · closing.body
+      kicker   *.kicker · closing.cta
+      number   number.value
+      meta     handle · category · page number · slide hint · step index · Myth/Fact labels
+
+    Visibility: every --show-* variable is either `initial` (shown) or `none` (hidden).
+    `initial` makes var() fall back to the element's own value, e.g.
+    display: var(--show-handle, inline-block). Use only these two values.
+
+    Dynamic text is marked with data-field="..." for the Jinja conversion.
+    meta.index / meta.count are the slide number and the slide total, meta.item is the
+    number of the item inside a list (step index); the compiler computes them.
+    Per-slide inline style sets --slide-index and --slide-count (progress bar).
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link id="google-fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,400&amp;family=Inter:ital,wght@0,400;0,500;0,700&amp;display=block">
+  <style>
+    /* @vars:start */
+    :root {
+      --color-background: #F4F1EA;
+      --color-text: #1B1A17;
+      --color-muted: #77726A;
+      --color-accent: #C2502A;
+      --color-surface: #E7E1D5;
+      --font-heading: "Fraunces", serif;
+      --font-body: "Inter", sans-serif;
+      --title-font: var(--font-heading);
+      --title-color: var(--color-text);
+      --title-size: 84px;
+      --title-line-height: 1.05;
+      --title-letter-spacing: -0.02em;
+      --title-weight: 600;
+      --title-style: normal;
+      --title-transform: none;
+      --title-align: left;
+      --subtitle-font: var(--font-heading);
+      --subtitle-color: var(--color-text);
+      --subtitle-size: 40px;
+      --subtitle-line-height: 1.25;
+      --subtitle-letter-spacing: 0em;
+      --subtitle-weight: 400;
+      --subtitle-style: italic;
+      --subtitle-transform: none;
+      --subtitle-align: left;
+      --body-font: var(--font-body);
+      --body-color: var(--color-text);
+      --body-size: 32px;
+      --body-line-height: 1.45;
+      --body-letter-spacing: 0em;
+      --body-weight: 400;
+      --body-style: normal;
+      --body-transform: none;
+      --body-align: left;
+      --kicker-font: var(--font-body);
+      --kicker-color: var(--color-accent);
+      --kicker-size: 22px;
+      --kicker-line-height: 1.2;
+      --kicker-letter-spacing: 0.16em;
+      --kicker-weight: 700;
+      --kicker-style: normal;
+      --kicker-transform: uppercase;
+      --kicker-align: left;
+      --number-font: var(--font-heading);
+      --number-color: var(--color-accent);
+      --number-size: 220px;
+      --number-line-height: 0.95;
+      --number-letter-spacing: -0.03em;
+      --number-weight: 600;
+      --number-style: normal;
+      --number-transform: none;
+      --number-align: left;
+      --meta-font: var(--font-body);
+      --meta-color: var(--color-muted);
+      --meta-size: 20px;
+      --meta-line-height: 1.2;
+      --meta-letter-spacing: 0.08em;
+      --meta-weight: 500;
+      --meta-style: normal;
+      --meta-transform: uppercase;
+      --meta-align: left;
+      --title-padding-x: 0px;
+      --title-padding-y: 0px;
+      --title-margin-x: 0px;
+      --title-margin-y: 14px;
+      --subtitle-padding-x: 0px;
+      --subtitle-padding-y: 0px;
+      --subtitle-margin-x: 0px;
+      --subtitle-margin-y: 10px;
+      --body-padding-x: 0px;
+      --body-padding-y: 0px;
+      --body-margin-x: 0px;
+      --body-margin-y: 10px;
+      --kicker-padding-x: 0px;
+      --kicker-padding-y: 0px;
+      --kicker-margin-x: 0px;
+      --kicker-margin-y: 18px;
+      --number-padding-x: 0px;
+      --number-padding-y: 0px;
+      --number-margin-x: 0px;
+      --number-margin-y: 6px;
+      --meta-padding-x: 0px;
+      --meta-padding-y: 0px;
+      --meta-margin-x: 0px;
+      --meta-margin-y: 0px;
+      --layout-padding-x: 96px;
+      --layout-padding-y: 80px;
+      --layout-cover-title-scale: 1.3;
+      --layout-frame-inset: 28px;
+      --layout-frame-width: 2px;
+      --show-handle: initial;
+      --show-category: initial;
+      --show-page-number: initial;
+      --show-page-total: initial;
+      --show-kicker: initial;
+      --show-kicker-rule: initial;
+      --show-progress-bar: initial;
+      --show-frame: none;
+      --show-watermark: none;
+      --show-cover-subtitle: initial;
+      --show-cover-slide-hint: initial;
+      --show-cover-slide-hint-arrow: initial;
+      --show-cover-page-number: none;
+      --show-text-title: initial;
+      --show-number-caption: initial;
+      --show-number-body: initial;
+      --show-steps-index: initial;
+      --show-steps-descriptions: initial;
+      --show-steps-dividers: initial;
+      --show-compare-labels: initial;
+      --show-compare-divider: initial;
+      --show-compare-surface: none;
+      --show-compare-bullets: initial;
+      --show-myth-labels: initial;
+      --show-myth-strike: initial;
+      --show-myth-fact-surface: initial;
+      --show-tip-mark: initial;
+      --show-tip-note: initial;
+      --show-closing-body: initial;
+      --show-closing-cta: initial;
+      --show-closing-cta-arrow: initial;
+      --show-closing-handle: none;
+    }
+    /* @vars:end */
+
+    /* ---------- reset ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; }
+    h1, h2, h3, p, ol, ul, li { margin: 0; padding: 0; }
+    ol, ul { list-style: none; }
+
+    body {
+      background: #2B2B2B;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 48px;
+      padding: 48px 0;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      font-optical-sizing: auto;
+    }
+
+    /* ---------- slide ---------- */
+    .slide {
+      position: relative;
+      width: 1080px;
+      height: 1350px;
+      flex: none;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: var(--layout-padding-y) var(--layout-padding-x);
+      background: var(--color-background);
+      color: var(--color-text);
+      font-family: var(--font-body);
+    }
+
+    .slide__header,
+    .slide__content,
+    .slide__footer { position: relative; z-index: 1; }
+
+    .slide__header,
+    .slide__footer {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex: none;
+    }
+
+    .slide__content {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .slide--cover .slide__content {
+      justify-content: flex-end;
+      padding-bottom: 40px;
+    }
+
+    /* ---------- typographic roles ---------- */
+    .t-title {
+      font-family: var(--title-font);
+      color: var(--title-color);
+      font-size: var(--title-size);
+      line-height: var(--title-line-height);
+      letter-spacing: var(--title-letter-spacing);
+      font-weight: var(--title-weight);
+      font-style: var(--title-style);
+      text-transform: var(--title-transform);
+      text-align: var(--title-align);
+      padding: var(--title-padding-y) var(--title-padding-x);
+      margin: var(--title-margin-y) var(--title-margin-x);
+      text-wrap: balance;
+    }
+    .slide--cover .t-title {
+      font-size: calc(var(--title-size) * var(--layout-cover-title-scale));
+    }
+
+    .t-subtitle {
+      font-family: var(--subtitle-font);
+      color: var(--subtitle-color);
+      font-size: var(--subtitle-size);
+      line-height: var(--subtitle-line-height);
+      letter-spacing: var(--subtitle-letter-spacing);
+      font-weight: var(--subtitle-weight);
+      font-style: var(--subtitle-style);
+      text-transform: var(--subtitle-transform);
+      text-align: var(--subtitle-align);
+      padding: var(--subtitle-padding-y) var(--subtitle-padding-x);
+      margin: var(--subtitle-margin-y) var(--subtitle-margin-x);
+      text-wrap: pretty;
+    }
+
+    .t-body {
+      font-family: var(--body-font);
+      color: var(--body-color);
+      font-size: var(--body-size);
+      line-height: var(--body-line-height);
+      letter-spacing: var(--body-letter-spacing);
+      font-weight: var(--body-weight);
+      font-style: var(--body-style);
+      text-transform: var(--body-transform);
+      text-align: var(--body-align);
+      padding: var(--body-padding-y) var(--body-padding-x);
+      margin: var(--body-margin-y) var(--body-margin-x);
+      text-wrap: pretty;
+    }
+
+    .t-kicker {
+      font-family: var(--kicker-font);
+      color: var(--kicker-color);
+      font-size: var(--kicker-size);
+      line-height: var(--kicker-line-height);
+      letter-spacing: var(--kicker-letter-spacing);
+      font-weight: var(--kicker-weight);
+      font-style: var(--kicker-style);
+      text-transform: var(--kicker-transform);
+      text-align: var(--kicker-align);
+      padding: var(--kicker-padding-y) var(--kicker-padding-x);
+      margin: var(--kicker-margin-y) var(--kicker-margin-x);
+    }
+
+    .t-number {
+      font-family: var(--number-font);
+      color: var(--number-color);
+      font-size: var(--number-size);
+      line-height: var(--number-line-height);
+      letter-spacing: var(--number-letter-spacing);
+      font-weight: var(--number-weight);
+      font-style: var(--number-style);
+      text-transform: var(--number-transform);
+      text-align: var(--number-align);
+      padding: var(--number-padding-y) var(--number-padding-x);
+      margin: var(--number-margin-y) var(--number-margin-x);
+      font-variant-numeric: lining-nums;
+    }
+
+    .t-meta {
+      font-family: var(--meta-font);
+      color: var(--meta-color);
+      font-size: var(--meta-size);
+      line-height: var(--meta-line-height);
+      letter-spacing: var(--meta-letter-spacing);
+      font-weight: var(--meta-weight);
+      font-style: var(--meta-style);
+      text-transform: var(--meta-transform);
+      text-align: var(--meta-align);
+      padding: var(--meta-padding-y) var(--meta-padding-x);
+      margin: var(--meta-margin-y) var(--meta-margin-x);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ---------- decorations & optional elements ---------- */
+    .frame {
+      display: var(--show-frame, block);
+      position: absolute;
+      inset: var(--layout-frame-inset);
+      border: var(--layout-frame-width) solid var(--color-muted);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .watermark {
+      display: var(--show-watermark, block);
+      position: absolute;
+      right: calc(var(--layout-padding-x) * 0.5);
+      bottom: -0.2em;
+      z-index: 0;
+      font-family: var(--font-heading);
+      font-weight: var(--title-weight);
+      font-size: 720px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      color: var(--color-surface);
+      user-select: none;
+    }
+
+    /* header */
+    .handle   { display: var(--show-handle, inline-block); }
+    .category { display: var(--show-category, inline-block); margin-left: auto; }
+
+    /* kicker */
+    .kicker { display: var(--show-kicker, block); }
+    .kicker-rule {
+      display: var(--show-kicker-rule, inline-block);
+      width: 40px;
+      height: 3px;
+      margin-right: 16px;
+      vertical-align: middle;
+      position: relative;
+      top: -0.1em;
+      background: currentColor;
+    }
+
+    /* footer */
+    .progress {
+      display: var(--show-progress-bar, block);
+      flex: 1;
+      height: 4px;
+      background: var(--color-surface);
+      overflow: hidden;
+    }
+    .progress__fill {
+      height: 100%;
+      width: calc(var(--slide-index) / var(--slide-count) * 100%);
+      background: var(--color-accent);
+    }
+    .slide__footer-end {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .slide-hint        { display: var(--show-cover-slide-hint, inline-block); color: var(--color-text); }
+    .slide-hint__arrow { display: var(--show-cover-slide-hint-arrow, inline); color: var(--color-accent); }
+    .page-number-wrap  { display: inline; }
+    .slide--cover .page-number-wrap { display: var(--show-cover-page-number, inline); }
+    .page-number       { display: var(--show-page-number, inline-block); }
+    .page-total        { display: var(--show-page-total, inline); opacity: 0.6; }
+
+    /* steps */
+    .steps { margin-top: 24px; }
+    .step {
+      display: flex;
+      align-items: baseline;
+      gap: 32px;
+      padding: 20px 0;
+      border-top: var(--show-steps-dividers, 2px solid color-mix(in srgb, var(--color-muted) 35%, transparent));
+    }
+    .step:last-child {
+      border-bottom: var(--show-steps-dividers, 2px solid color-mix(in srgb, var(--color-muted) 35%, transparent));
+    }
+    .step__index   { display: var(--show-steps-index, block); color: var(--color-accent); min-width: 2.2em; }
+    .step__content { flex: 1; min-width: 0; }
+
+    /* compare */
+    .compare {
+      display: flex;
+      align-items: stretch;
+      gap: 40px;
+      margin-top: 32px;
+    }
+    .compare__col {
+      flex: 1;
+      min-width: 0;
+      /* `none` → no background, and the invalid padding falls back to 0 */
+      background: var(--show-compare-surface, var(--color-surface));
+      padding: var(--show-compare-surface, 36px 32px);
+    }
+    .compare__divider {
+      display: var(--show-compare-divider, block);
+      flex: none;
+      width: 2px;
+      background: color-mix(in srgb, var(--color-muted) 35%, transparent);
+    }
+    .compare__items li::before {
+      content: var(--show-compare-bullets, "—\00a0\00a0");
+      color: var(--color-accent);
+    }
+
+    /* myth */
+    .myth-label { display: var(--show-myth-labels, block); }
+    .myth-label--fact { color: var(--color-accent); margin-top: 24px; }
+    .myth-strike {
+      text-decoration-line: var(--show-myth-strike, line-through);
+      text-decoration-color: var(--color-accent);
+      text-decoration-thickness: 0.06em;
+    }
+    .fact {
+      margin-top: 12px;
+      background: var(--show-myth-fact-surface, var(--color-surface));
+      padding: var(--show-myth-fact-surface, 36px 40px);
+    }
+
+    /* tip */
+    .tip-mark {
+      display: var(--show-tip-mark, block);
+      font-family: var(--font-heading);
+      font-weight: var(--title-weight);
+      font-size: 200px;
+      line-height: 0.6;
+      height: 0.5em;
+      margin-bottom: 40px;
+      color: var(--color-accent);
+      text-align: var(--title-align);
+    }
+
+    /* optional schema fields */
+    .cover-subtitle  { display: var(--show-cover-subtitle, block); }
+    .text-title      { display: var(--show-text-title, block); }
+    .number-caption  { display: var(--show-number-caption, block); }
+    .number-body     { display: var(--show-number-body, block); }
+    .step__text      { display: var(--show-steps-descriptions, block); }
+    .compare__label  { display: var(--show-compare-labels, block); }
+    .tip-note        { display: var(--show-tip-note, block); }
+    .closing-body    { display: var(--show-closing-body, block); }
+
+    /* closing */
+    .cta { display: var(--show-closing-cta, block); margin-top: calc(var(--kicker-margin-y) + 32px); }
+    .cta-arrow { display: var(--show-closing-cta-arrow, inline); }
+    .closing-handle { display: var(--show-closing-handle, block); }
+  </style>
+</head>
+<body>
+
+  <!-- 1 · COVER -->
+  <section class="slide slide--cover" data-type="cover" style="--slide-index: 1; --slide-count: 8;">
+    <div class="frame" aria-hidden="true"></div>
+    <div class="watermark" aria-hidden="true" data-field="meta.index">01</div>
+    <header class="slide__header">
+      <span class="t-meta handle" data-field="handle">@coffee_extracts</span>
+      <span class="t-meta category" data-field="category">How-to</span>
+    </header>
+    <main class="slide__content">
+      <p class="t-kicker kicker"><span class="kicker-rule" aria-hidden="true"></span><span data-field="kicker">How-to</span></p>
+      <h1 class="t-title" data-field="title">Fill a moka pot the right way</h1>
+      <p class="t-subtitle cover-subtitle" data-field="subtitle">Four small moves that change your morning coffee.</p>
+    </main>
+    <footer class="slide__footer">
+      <div class="progress" aria-hidden="true"><div class="progress__fill"></div></div>
+      <div class="slide__footer-end">
+        <span class="t-meta slide-hint">Swipe<span class="slide-hint__arrow">&nbsp;→</span></span>
+        <span class="page-number-wrap"><span class="t-meta page-number"><span data-field="meta.index">01</span><span class="page-total"> / <span data-field="meta.count">08</span></span></span></span>
+      </div>
+    </footer>
+  </section>
+
+  <!-- 2 · MYTH -->
+  <section class="slide slide--myth" data-type="myth" style="--slide-index: 2; --slide-count: 8;">
+    <div class="frame" aria-hidden="true"></div>
+    <div class="watermark" aria-hidden="true" data-field="meta.index">02</div>
+    <header class="slide__header">
+      <span class="t-meta handle" data-field="handle">@coffee_extracts</span>
+      <span class="t-meta category" data-field="category">How-to</span>
+    </header>
+    <main class="slide__content">
+      <p class="t-kicker kicker"><span class="kicker-rule" aria-hidden="true"></span><span data-field="kicker">Myth busting</span></p>
+      <p class="t-meta myth-label">Myth</p>
+      <h2 class="t-title"><span class="myth-strike" data-field="myth">You should tamp the coffee down hard.</span></h2>
+      <p class="t-meta myth-label myth-label--fact">Fact</p>
+      <div class="fact">
+        <p class="t-body" data-field="fact">Not in a moka pot: just level it. Packed coffee makes it hard for water to pass, and the result tastes bitter and burnt.</p>
+      </div>
+    </main>
+    <footer class="slide__footer">
+      <div class="progress" aria-hidden="true"><div class="progress__fill"></div></div>
+      <div class="slide__footer-end">
+        <span class="page-number-wrap"><span class="t-meta page-number"><span data-field="meta.index">02</span><span class="page-total"> / <span data-field="meta.count">08</span></span></span></span>
+      </div>
+    </footer>
+  </section>
+
+  <!-- 3 · STEPS -->
+  <section class="slide slide--steps" data-type="steps" style="--slide-index: 3; --slide-count: 8;">
+    <div class="frame" aria-hidden="true"></div>
+    <div class="watermark" aria-hidden="true" data-field="meta.index">03</div>
+    <header class="slide__header">
+      <span class="t-meta handle" data-field="handle">@coffee_extracts</span>
+      <span class="t-meta category" data-field="category">How-to</span>
+    </header>
+    <main class="slide__content">
+      <p class="t-kicker kicker"><span class="kicker-rule" aria-hidden="true"></span><span data-field="kicker">How to</span></p>
+      <h2 class="t-title" data-field="title">Filling it, in order</h2>
+      <ol class="steps" data-field="steps">
+        <li class="step">
+          <span class="t-meta step__index" data-field="meta.item">01</span>
+          <div class="step__content">
+            <p class="t-subtitle" data-field="steps[].title">Water</p>
+            <p class="t-body step__text" data-field="steps[].text">In the bottom chamber, just below the valve.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="t-meta step__index" data-field="meta.item">02</span>
+          <div class="step__content">
+            <p class="t-subtitle" data-field="steps[].title">Coffee</p>
+            <p class="t-body step__text" data-field="steps[].text">In the filter basket, no tamping.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="t-meta step__index" data-field="meta.item">03</span>
+          <div class="step__content">
+            <p class="t-subtitle" data-field="steps[].title">Level</p>
+            <p class="t-body step__text" data-field="steps[].text">Wipe stray grounds off the rim.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="t-meta step__index" data-field="meta.item">04</span>
+          <div class="step__content">
+            <p class="t-subtitle" data-field="steps[].title">Close</p>
+            <p class="t-body step__text" data-field="steps[].text">Screw it shut firmly, without forcing it.</p>
+          </div>
+        </li>
+      </ol>
+    </main>
+    <footer class="slide__footer">
+      <div class="progress" aria-hidden="true"><div class="progress__fill"></div></div>
+      <div class="slide__footer-end">
+        <span class="page-number-wrap"><span class="t-meta page-number"><span data-field="meta.index">03</span><span class="page-total"> / <span data-field="meta.count">08</span></span></span></span>
+      </div>
+    </footer>
+  </section>
+
+  <!-- 4 · TEXT -->
+  <section class="slide slide--text" data-type="text" style="--slide-index: 4; --slide-count: 8;">
+    <div class="frame" aria-hidden="true"></div>
+    <div class="watermark" aria-hidden="true" data-field="meta.index">04</div>
+    <header class="slide__header">
+      <span class="t-meta handle" data-field="handle">@coffee_extracts</span>
+      <span class="t-meta category" data-field="category">How-to</span>
+    </header>
+    <main class="slide__content">
+      <p class="t-kicker kicker"><span class="kicker-rule" aria-hidden="true"></span><span data-field="kicker">Safety</span></p>
+      <h2 class="t-title text-title" data-field="title">Why the valve matters</h2>
+      <p class="t-body" data-field="body">It releases pressure if something gets blocked. If the water covers it, it can't do its job.</p>
+    </main>
+    <footer class="slide__footer">
+      <div class="progress" aria-hidden="true"><div class="progress__fill"></div></div>
+      <div class="slide__footer-end">
+        <span class="page-number-wrap"><span class="t-meta page-number"><span data-field="meta.index">04</span><span class="page-total"> / <span data-field="meta.count">08</span></span></span></span>
+      </div>
+    </footer>
+  </section>
+
+  <!-- 5 · COMPARE -->
+  <section class="slide slide--compare" data-type="compare" style="--slide-index: 5; --slide-count: 8;">
+    <div class="frame" aria-hidden="true"></div>
+    <div class="watermark" aria-hidden="true" data-field="meta.index">05</div>
+    <header class="slide__header">
+      <span class="t-meta handle" data-field="handle">@coffee_extracts</span>
+      <span class="t-meta category" data-field="category">How-to</span>
+    </header>
+    <main class="slide__content">
+      <p class="t-kicker kicker"><span class="kicker-rule" aria-hidden="true"></span><span data-field="kicker">Side by side</span></p>
+      <h2 class="t-title" data-field="title">Grind: moka vs espresso</h2>
+      <div class="compare">
+        <div class="compare__col compare__col--left">
+          <p class="t-subtitle compare__label" data-field="left.label">Moka</p>
+          <ul class="compare__items" data-field="left.items">
+            <li class="t-body">Medium, slightly gritty</li>
+            <li class="t-body">Like fine table salt</li>
+          </ul>
+        </div>
+        <div class="compare__divider" aria-hidden="true"></div>
+        <div class="compare__col compare__col--right">
+          <p class="t-subtitle compare__label" data-field="right.label">Espresso</p>
+          <ul class="compare__items" data-field="right.items">
+            <li class="t-body">Fine, almost powder</li>
+            <li class="t-body">Sticks to your fingers</li>
+          </ul>
+        </div>
+      </div>
+    </main>
+    <footer class="slide__footer">
+      <div class="progress" aria-hidden="true"><div class="progress__fill"></div></div>
+      <div class="slide__footer-end">
+        <span class="page-number-wrap"><span class="t-meta page-number"><span data-field="meta.index">05</span><span class="page-total"> / <span data-field="meta.count">08</span></span></span></span>
+      </div>
+    </footer>
+  </section>
+
+  <!-- 6 · NUMBER -->
+  <section class="slide slide--number" data-type="number" style="--slide-index: 6; --slide-count: 8;">
+    <div class="frame" aria-hidden="true"></div>
+    <div class="watermark" aria-hidden="true" data-field="meta.index">06</div>
+    <header class="slide__header">
+      <span class="t-meta handle" data-field="handle">@coffee_extracts</span>
+      <span class="t-meta category" data-field="category">How-to</span>
+    </header>
+    <main class="slide__content">
+      <p class="t-kicker kicker"><span class="kicker-rule" aria-hidden="true"></span><span data-field="kicker">By the numbers</span></p>
+      <p class="t-number" data-field="value">1.5 bar</p>
+      <p class="t-subtitle number-caption" data-field="caption">Roughly the pressure inside a moka pot.</p>
+      <p class="t-body number-body" data-field="body">Espresso uses around 9: that's why they're two different coffees.</p>
+    </main>
+    <footer class="slide__footer">
+      <div class="progress" aria-hidden="true"><div class="progress__fill"></div></div>
+      <div class="slide__footer-end">
+        <span class="page-number-wrap"><span class="t-meta page-number"><span data-field="meta.index">06</span><span class="page-total"> / <span data-field="meta.count">08</span></span></span></span>
+      </div>
+    </footer>
+  </section>
+
+  <!-- 7 · TIP -->
+  <section class="slide slide--tip" data-type="tip" style="--slide-index: 7; --slide-count: 8;">
+    <div class="frame" aria-hidden="true"></div>
+    <div class="watermark" aria-hidden="true" data-field="meta.index">07</div>
+    <header class="slide__header">
+      <span class="t-meta handle" data-field="handle">@coffee_extracts</span>
+      <span class="t-meta category" data-field="category">How-to</span>
+    </header>
+    <main class="slide__content">
+      <div class="tip-mark" aria-hidden="true">*</div>
+      <p class="t-kicker kicker"><span class="kicker-rule" aria-hidden="true"></span><span data-field="kicker">The tip</span></p>
+      <h2 class="t-title" data-field="tip">Keep the heat low.</h2>
+      <p class="t-body tip-note" data-field="note">Never let the flame reach past the sides of the base.</p>
+    </main>
+    <footer class="slide__footer">
+      <div class="progress" aria-hidden="true"><div class="progress__fill"></div></div>
+      <div class="slide__footer-end">
+        <span class="page-number-wrap"><span class="t-meta page-number"><span data-field="meta.index">07</span><span class="page-total"> / <span data-field="meta.count">08</span></span></span></span>
+      </div>
+    </footer>
+  </section>
+
+  <!-- 8 · CLOSING -->
+  <section class="slide slide--closing" data-type="closing" style="--slide-index: 8; --slide-count: 8;">
+    <div class="frame" aria-hidden="true"></div>
+    <div class="watermark" aria-hidden="true" data-field="meta.index">08</div>
+    <header class="slide__header">
+      <span class="t-meta handle" data-field="handle">@coffee_extracts</span>
+      <span class="t-meta category" data-field="category">How-to</span>
+    </header>
+    <main class="slide__content">
+      <h2 class="t-title" data-field="title">Save it for tomorrow morning</h2>
+      <p class="t-body closing-body" data-field="body">Four moves, no extra gear. The moka does the rest.</p>
+      <p class="t-kicker cta"><span data-field="cta">Save and try it</span><span class="cta-arrow">&nbsp;→</span></p>
+      <p class="t-meta closing-handle" data-field="handle">@coffee_extracts</p>
+    </main>
+    <footer class="slide__footer">
+      <div class="progress" aria-hidden="true"><div class="progress__fill"></div></div>
+      <div class="slide__footer-end">
+        <span class="page-number-wrap"><span class="t-meta page-number"><span data-field="meta.index">08</span><span class="page-total"> / <span data-field="meta.count">08</span></span></span></span>
+      </div>
+    </footer>
+  </section>
+
+</body>
+</html>

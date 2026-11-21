@@ -18,6 +18,7 @@ Per ogni programma ogni idea ha al più un post, identificato da (program_id, id
 
 import asyncio
 import logging
+import re
 from collections.abc import Callable
 from datetime import UTC, datetime
 
@@ -25,12 +26,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from autopost_server.integrations import instagram
-from autopost_server.models import Idea, Post, Program, Slide
+from autopost_server.models import Idea, Post, Program, Slide, Template
 from autopost_server.models.enums import PostStatus, ProgramMode
-from autopost_server.services.generation import CarouselContent, generate_carousel
+from autopost_server.services.generation import generate_post
 from autopost_server.services.logs import log_error, log_info, log_success
 from autopost_server.services.rendering import RenderError, render_slides
 from autopost_server.services.storage import presigned_url
+from autopost_server.services.templates import page_count
 
 logger = logging.getLogger(__name__)
 
@@ -106,8 +108,12 @@ async def run_program_pipeline(
 
     # nessun post, o un post creato dall'API senza contenuto: serve il contenuto di Claude
     if post is None or post.content is None:
+        # il tipo di post (e quindi lo schema del contenuto) è quello del template del programma
+        template = program.template
         try:
-            content = await generate_carousel(idea)
+            if template is None:
+                raise RuntimeError(f"Program {program.id} has no template")
+            content = await generate_post(idea, template.type)
         except Exception as e:
             db.rollback()
             log_error(db, program.id, f"Content generation failed: {e}", idea_id=idea.id)
@@ -115,7 +121,7 @@ async def run_program_pipeline(
         if post is None:
             post = Post(program_id=program.id, idea_id=idea.id)
             db.add(post)
-        set_content(post, content)
+        set_content(post, content, template)
         post.status = PostStatus.PENDING
         # salvato subito: se un passo successivo fallisce il contenuto resta nel post
         db.commit()
@@ -145,14 +151,36 @@ async def run_program_pipeline(
     return await publish_post_safely(db, post)
 
 
-def set_content(post: Post, content: CarouselContent) -> None:
-    post.content = content.model_dump(mode="json")
-    post.caption = content.caption
+def set_content(post: Post, content: dict, template: Template) -> None:
+    """Salva il contenuto e il template con cui è stato generato: da post.template si risale al
+    tipo di post (template.type) di cui il contenuto rispetta lo schema.
+
+    content ha la struttura del format del tipo di post: caption e hashtags ci sono in tutti i
+    tipi, e su Instagram vanno nella stessa caption."""
+    post.content = content
+    post.template = template
+    hashtags = " ".join(_hashtags(content.get("hashtags", [])))
+    post.caption = f"{content['caption']}\n\n{hashtags}" if hashtags else content["caption"]
+
+
+def _hashtags(tags: list[str]) -> list[str]:
+    """Gli hashtag come li vuole Instagram: una parola sola, minuscola, senza ripetizioni.
+
+    Restano lettere (anche accentate), cifre e _: spazi, punteggiatura e caratteri invisibili
+    (es. lo spazio a larghezza zero, che Claude a volte inserisce) spezzerebbero il tag."""
+    result = []
+    for tag in tags:
+        word = re.sub(r"\W", "", tag).lower()
+        if word and f"#{word}" not in result:
+            result.append(f"#{word}")
+    return result
 
 
 async def render_post(db: Session, post: Post) -> None:
-    """Crea le slide del post a partire da post.content e dal template Jinja collegato al suo
-    programma (Program.template, letto dal DB a ogni rendering: vale l'ultima versione salvata).
+    """Crea le slide del post a partire da post.content e dal template con cui è stato generato
+    (Post.template, letto dal DB a ogni rendering: vale l'ultima definizione salvata). Anche se il
+    programma nel frattempo ha cambiato template, il post si disegna con il suo, il cui tipo
+    corrisponde allo schema del contenuto.
 
     Le immagini vengono caricate su R2 e di ogni slide si salva solo la chiave (Slide.storage_key):
     l'URL da cui Instagram la scarica si genera alla pubblicazione.
@@ -161,16 +189,20 @@ async def render_post(db: Session, post: Post) -> None:
     """
     if post.content is None:
         raise RenderError(f"Post {post.id} has no content to render")
-    template = post.program.template
-    if template is None:
-        raise RenderError(f"Program {post.program_id} has no template to render post {post.id}")
+    if post.template is None:
+        # post generati prima del collegamento a template: si adottano il template del programma
+        if post.program.template is None:
+            raise RenderError(f"Program {post.program_id} has no template to render post {post.id}")
+        post.template = post.program.template
+    template = post.template
 
     content = dict(post.content)
     handle = post.program.instagram_account.handle.lstrip("@")
     content["handle"] = f"@{handle}"
+    pages = page_count(template.type, content)
 
     # il browser è lento e bloccante: fuori dall'event loop condiviso con l'API
-    result = await asyncio.to_thread(render_slides, post.id, content, template.jinja_content)
+    result = await asyncio.to_thread(render_slides, post.id, content, template.jinja_content, pages)
 
     post.slides.clear()
     # le DELETE prima delle INSERT, altrimenti violano uq_slide_post_position
