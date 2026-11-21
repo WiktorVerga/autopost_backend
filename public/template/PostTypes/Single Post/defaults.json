@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "postType": "single-post",
+  "colors": {
+    "background": "#F4F1EA",
+    "text": "#1B1A17",
+    "muted": "#77726A",
+    "accent": "#C2502A",
+    "surface": "#E7E1D5"
+  },
+  "fonts": {
+    "heading": {
+      "family": "Fraunces",
+      "fallback": "serif"
+    },
+    "body": {
+      "family": "Inter",
+      "fallback": "sans-serif"
+    }
+  },
+  "typography": {
+    "title": {
+      "font": "heading",
+      "color": "text",
+      "size": 84,
+      "lineHeight": 1.08,
+      "letterSpacing": -0.02,
+      "weight": 500,
+      "style": "normal",
+      "transform": "none",
+      "align": "center"
+    },
+    "kicker": {
+      "font": "body",
+      "color": "accent",
+      "size": 22,
+      "lineHeight": 1.2,
+      "letterSpacing": 0.16,
+      "weight": 700,
+      "style": "normal",
+      "transform": "uppercase",
+      "align": "center"
+    },
+    "meta": {
+      "font": "body",
+      "color": "muted",
+      "size": 20,
+      "lineHeight": 1.2,
+      "letterSpacing": 0.08,
+      "weight": 500,
+      "style": "normal",
+      "transform": "uppercase",
+      "align": "center"
+    }
+  },
+  "spacing": {
+    "title": {
+      "paddingX": 0,
+      "paddingY": 0,
+      "marginX": 0,
+      "marginY": 0
+    },
+    "kicker": {
+      "paddingX": 0,
+      "paddingY": 0,
+      "marginX": 0,
+      "marginY": 28
+    },
+    "meta": {
+      "paddingX": 0,
+      "paddingY": 0,
+      "marginX": 0,
+      "marginY": 0
+    },
+    "decoration": {
+      "paddingX": 0,
+      "paddingY": 0,
+      "marginX": 0,
+      "marginY": 32
+    }
+  },
+  "decoration": {
+    "size": 440,
+    "position": "above",
+    "align": "center",
+    "lineColor": "text",
+    "paperColor": "background",
+    "fillColor": "accent",
+    "backdropColor": "surface",
+    "backdropShape": "circle",
+    "backdropScale": 0.86
+  },
+  "layout": {
+    "paddingX": 96,
+    "paddingY": 80,
+    "contentPosition": "center",
+    "frameInset": 28,
+    "frameWidth": 2
+  },
+  "visibility": {
+    "text": {
+      "category": true,
+      "categoryRule": true,
+      "quoteMarks": false,
+      "highlight": false
+    },
+    "decoration": {
+      "artwork": true,
+      "backdrop": true
+    },
+    "extras": {
+      "handle": true,
+      "frame": false
+    }
+  }
+}

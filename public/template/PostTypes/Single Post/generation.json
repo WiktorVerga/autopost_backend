@@ -1,0 +1,36 @@
+{
+  "name": "single-post",
+  "label": "Single Post",
+  "brief": "One image with one short line, understood in under a second. The line is what people save or send, so it has to feel instantly true to them.\n- Pick the angle that fits the idea: mood (a feeling they know, saves), fact (an everyday truth they can't deny, shares), motivational (a push to act, saves, follows).\n- Write the line as people would say it: specific, a little unexpected, never a slogan or a generic quote.\n- The illustration shows the subject of the line, playful and readable at a glance; it supports the line, it doesn't explain it.\n- Caption: one short paragraph that adds a layer of meaning or a small story behind the line, without repeating it. No call to action.",
+  "format": {
+    "category": "Series label, 1-3 words",
+    "content": {
+      "text": "The one line on the image, max 12 words",
+      "decoration": "Inline SVG illustration of the line's subject: one <svg> with a viewBox, a few bold rounded shapes in a simple doodle style, colors only through var(--art-line), var(--art-paper) and var(--art-fill), no text, at most 20 elements"
+    },
+    "caption": "Hook in the first 125 characters, no hashtags",
+    "hashtags": [
+      "One lowercase hashtag, e.g. #mokapot"
+    ]
+  },
+  "limits": {
+    "hashtags": [
+      3,
+      5
+    ]
+  },
+  "sample_content": {
+    "category": "morning coffee",
+    "content": {
+      "text": "I'll be nice in one cup",
+      "decoration": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 335 450' fill='none' stroke-linecap='round' stroke-linejoin='round'><g transform='translate(-41.2 28.0)'><path d='M 280 262 C 356 244 362 362 268 352' fill='none' stroke='var(--art-line, #15110e)' stroke-width='28'/><path d='M 280 262 C 356 244 362 362 268 352' fill='none' stroke='var(--art-paper, #ffffff)' stroke-width='12'/><path d='M 60 200 C 57 290 64 350 84 382 C 96 400 120 404 175 404 C 230 404 254 400 266 382 C 286 350 293 290 290 200 Z' fill='var(--art-paper, #ffffff)' stroke='var(--art-line, #15110e)' stroke-width='8'/><ellipse cx='175' cy='200' rx='115' ry='27' fill='var(--art-fill, #d2a369)' stroke='var(--art-line, #15110e)' stroke-width='8'/><path d='M 100 210 C 140 220 214 220 252 208' fill='none' stroke='var(--art-paper, #ffffff)' stroke-width='8' opacity='0.35'/><path d='M 100 286 h 44' fill='none' stroke='var(--art-line, #15110e)' stroke-width='8'/><path d='M 108 290 a 14 14 0 0 0 28 0 z' fill='var(--art-line, #15110e)'/><path d='M 196 286 h 44' fill='none' stroke='var(--art-line, #15110e)' stroke-width='8'/><path d='M 204 290 a 14 14 0 0 0 28 0 z' fill='var(--art-line, #15110e)'/><ellipse cx='170' cy='330' rx='8' ry='7' fill='var(--art-line, #15110e)'/><ellipse cx='88' cy='322' rx='16' ry='9' fill='var(--art-fill, #d2a369)' opacity='0.6'/><ellipse cx='252' cy='322' rx='16' ry='9' fill='var(--art-fill, #d2a369)' opacity='0.6'/><path d='M 150 150 C 126 126 176 112 156 84 C 148 72 152 62 160 54' fill='none' stroke='var(--art-line, #15110e)' stroke-width='8'/><path d='M 214 104 h 22 l -22 22 h 22' fill='none' stroke='var(--art-line, #15110e)' stroke-width='8'/><path d='M 262 52 h 30 l -30 30 h 30' fill='none' stroke='var(--art-line, #15110e)' stroke-width='8'/><path d='M 318 -10 h 40 l -40 40 h 40' fill='none' stroke='var(--art-line, #15110e)' stroke-width='8'/></g></svg>"
+    },
+    "caption": "Give it ten minutes. The first sip is for me, the second one is for you.",
+    "hashtags": [
+      "#coffeelover",
+      "#italiancoffee",
+      "#coffeefunny",
+      "#needcoffee"
+    ]
+  }
+}

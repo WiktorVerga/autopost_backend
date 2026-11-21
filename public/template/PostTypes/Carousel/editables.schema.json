@@ -1,0 +1,2859 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "autopost/templates/carousel.schema.json",
+  "title": "Carousel template",
+  "description": "Customization of the carousel base template (base.html). Every group is optional except version and postType: missing values fall back to the defaults defined here. The x-ui annotations describe how the editor builds its sidebar.",
+  "$comment": "x-ui reference. On objects: layout = section (top-level sidebar group) | subsection (collapsible block inside a section); order = position among siblings; collapsed = initial state; previewSlide = slide type to show in the preview while the block is open. On fields: control = color | font | segmented | swatch | slider | select | toggle | switch | hidden; order; unit and step for sliders; cssVar = CSS custom property written on :root; cssValue = template for its value ({value}, or {family}/{fallback} for fonts) or, for booleans, a map from 'true'/'false' to the value; optionsFrom = restrict a select to $defs.fontFamily.x-fontMeta[<family of fonts[<sibling fontRoleField>]>][meta]; enabledWhen = disable the control unless the condition holds: {path, equals} on another value, or {fontRoleField, meta, equals} on the font metadata; derivedFrom = value set automatically from a sibling field's font metadata; onValue/offValue = values of a toggle bound to an enum; icons = render options as icons. Visibility values become 'initial' (shown: var() falls back to the element's own value) or 'none' (hidden).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "postType"
+  ],
+  "properties": {
+    "version": {
+      "description": "Version of the JSON structure.",
+      "const": 1,
+      "default": 1,
+      "x-ui": {
+        "control": "hidden"
+      }
+    },
+    "postType": {
+      "description": "Post type the template renders.",
+      "const": "carousel",
+      "default": "carousel",
+      "x-ui": {
+        "control": "hidden"
+      }
+    },
+    "colors": {
+      "title": "Colors",
+      "description": "Fixed palette used by the whole template. Hexadecimal values.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "background": {
+          "title": "Background",
+          "description": "Slide background.",
+          "$ref": "#/$defs/color",
+          "default": "#F4F1EA",
+          "x-ui": {
+            "order": 1,
+            "control": "color",
+            "cssVar": "--color-background",
+            "cssValue": "{value}"
+          }
+        },
+        "text": {
+          "title": "Text",
+          "description": "Primary text: titles and body.",
+          "$ref": "#/$defs/color",
+          "default": "#1B1A17",
+          "x-ui": {
+            "order": 2,
+            "control": "color",
+            "cssVar": "--color-text",
+            "cssValue": "{value}"
+          }
+        },
+        "muted": {
+          "title": "Muted",
+          "description": "Secondary text: handle, category, page number, frame.",
+          "$ref": "#/$defs/color",
+          "default": "#77726A",
+          "x-ui": {
+            "order": 3,
+            "control": "color",
+            "cssVar": "--color-muted",
+            "cssValue": "{value}"
+          }
+        },
+        "accent": {
+          "title": "Accent",
+          "description": "Kickers, big number, CTA, progress bar, decorations.",
+          "$ref": "#/$defs/color",
+          "default": "#C2502A",
+          "x-ui": {
+            "order": 4,
+            "control": "color",
+            "cssVar": "--color-accent",
+            "cssValue": "{value}"
+          }
+        },
+        "surface": {
+          "title": "Surface",
+          "description": "Flat tinted areas: fact box, compare columns, progress track, watermark.",
+          "$ref": "#/$defs/color",
+          "default": "#E7E1D5",
+          "x-ui": {
+            "order": 5,
+            "control": "color",
+            "cssVar": "--color-surface",
+            "cssValue": "{value}"
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 1
+      },
+      "default": {
+        "background": "#F4F1EA",
+        "text": "#1B1A17",
+        "muted": "#77726A",
+        "accent": "#C2502A",
+        "surface": "#E7E1D5"
+      }
+    },
+    "fonts": {
+      "title": "Fonts",
+      "description": "Two Google Fonts from a closed list. Each typographic role picks one of them.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "heading": {
+          "title": "Heading font",
+          "description": "Default for titles, subtitles and the big number.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "family",
+            "fallback"
+          ],
+          "properties": {
+            "family": {
+              "title": "Family",
+              "description": "Google Fonts family.",
+              "$ref": "#/$defs/fontFamily",
+              "default": "Fraunces",
+              "x-ui": {
+                "order": 1,
+                "control": "font"
+              }
+            },
+            "fallback": {
+              "title": "Fallback",
+              "description": "Generic CSS family used while loading. Set automatically from the family.",
+              "$ref": "#/$defs/fontFallback",
+              "default": "serif",
+              "x-ui": {
+                "order": 2,
+                "control": "hidden",
+                "derivedFrom": {
+                  "field": "family",
+                  "meta": "category"
+                }
+              }
+            }
+          },
+          "default": {
+            "family": "Fraunces",
+            "fallback": "serif"
+          },
+          "x-ui": {
+            "order": 1,
+            "control": "font",
+            "cssVar": "--font-heading",
+            "cssValue": "\"{family}\", {fallback}"
+          }
+        },
+        "body": {
+          "title": "Body font",
+          "description": "Default for body text, kickers and meta.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "family",
+            "fallback"
+          ],
+          "properties": {
+            "family": {
+              "title": "Family",
+              "description": "Google Fonts family.",
+              "$ref": "#/$defs/fontFamily",
+              "default": "Inter",
+              "x-ui": {
+                "order": 1,
+                "control": "font"
+              }
+            },
+            "fallback": {
+              "title": "Fallback",
+              "description": "Generic CSS family used while loading. Set automatically from the family.",
+              "$ref": "#/$defs/fontFallback",
+              "default": "sans-serif",
+              "x-ui": {
+                "order": 2,
+                "control": "hidden",
+                "derivedFrom": {
+                  "field": "family",
+                  "meta": "category"
+                }
+              }
+            }
+          },
+          "default": {
+            "family": "Inter",
+            "fallback": "sans-serif"
+          },
+          "x-ui": {
+            "order": 2,
+            "control": "font",
+            "cssVar": "--font-body",
+            "cssValue": "\"{family}\", {fallback}"
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 2
+      },
+      "default": {
+        "heading": {
+          "family": "Fraunces",
+          "fallback": "serif"
+        },
+        "body": {
+          "family": "Inter",
+          "fallback": "sans-serif"
+        }
+      }
+    },
+    "typography": {
+      "title": "Typography",
+      "description": "One group per typographic role. Every text in the template uses exactly one role.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "description": "Used by: cover.title, text.title, steps.title, compare.title, myth.myth, tip.tip, closing.title.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "font": {
+              "title": "Font",
+              "description": "Which of the two template fonts this role uses.",
+              "$ref": "#/$defs/fontRole",
+              "default": "heading",
+              "x-ui": {
+                "order": 1,
+                "control": "segmented",
+                "cssVar": "--title-font",
+                "cssValue": "var(--font-{value})"
+              }
+            },
+            "color": {
+              "title": "Color",
+              "description": "Palette color for this role.",
+              "$ref": "#/$defs/paletteColor",
+              "default": "text",
+              "x-ui": {
+                "order": 2,
+                "control": "swatch",
+                "cssVar": "--title-color",
+                "cssValue": "var(--color-{value})"
+              }
+            },
+            "size": {
+              "title": "Size",
+              "description": "Font size on a 1080×1350 slide.",
+              "type": "integer",
+              "minimum": 40,
+              "maximum": 200,
+              "default": 84,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 1,
+                "cssVar": "--title-size",
+                "cssValue": "{value}px"
+              }
+            },
+            "lineHeight": {
+              "title": "Line height",
+              "description": "Unitless multiplier of the font size.",
+              "type": "number",
+              "minimum": 0.8,
+              "maximum": 2,
+              "default": 1.05,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "×",
+                "step": 0.05,
+                "cssVar": "--title-line-height",
+                "cssValue": "{value}"
+              }
+            },
+            "letterSpacing": {
+              "title": "Letter spacing",
+              "description": "Tracking in em.",
+              "type": "number",
+              "minimum": -0.1,
+              "maximum": 0.4,
+              "default": -0.02,
+              "x-ui": {
+                "order": 5,
+                "control": "slider",
+                "unit": "em",
+                "step": 0.01,
+                "cssVar": "--title-letter-spacing",
+                "cssValue": "{value}em"
+              }
+            },
+            "weight": {
+              "title": "Weight",
+              "description": "Font weight. Only the weights available in the chosen family are valid.",
+              "$ref": "#/$defs/fontWeight",
+              "default": 600,
+              "x-ui": {
+                "order": 6,
+                "control": "select",
+                "optionsFrom": {
+                  "fontRoleField": "font",
+                  "meta": "weights"
+                },
+                "cssVar": "--title-weight",
+                "cssValue": "{value}"
+              }
+            },
+            "style": {
+              "title": "Italic",
+              "description": "Italic or normal. Disabled when the chosen family has no italic.",
+              "$ref": "#/$defs/fontStyle",
+              "default": "normal",
+              "x-ui": {
+                "order": 7,
+                "control": "toggle",
+                "onValue": "italic",
+                "offValue": "normal",
+                "enabledWhen": {
+                  "fontRoleField": "font",
+                  "meta": "italic",
+                  "equals": true
+                },
+                "cssVar": "--title-style",
+                "cssValue": "{value}"
+              }
+            },
+            "transform": {
+              "title": "Case",
+              "description": "Text transform.",
+              "$ref": "#/$defs/textTransform",
+              "default": "none",
+              "x-ui": {
+                "order": 8,
+                "control": "segmented",
+                "cssVar": "--title-transform",
+                "cssValue": "{value}"
+              }
+            },
+            "align": {
+              "title": "Alignment",
+              "description": "Horizontal text alignment.",
+              "$ref": "#/$defs/textAlign",
+              "default": "left",
+              "x-ui": {
+                "order": 9,
+                "control": "segmented",
+                "icons": true,
+                "cssVar": "--title-align",
+                "cssValue": "{value}"
+              }
+            }
+          },
+          "default": {
+            "font": "heading",
+            "color": "text",
+            "size": 84,
+            "lineHeight": 1.05,
+            "letterSpacing": -0.02,
+            "weight": 600,
+            "style": "normal",
+            "transform": "none",
+            "align": "left"
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 1,
+            "collapsed": false
+          }
+        },
+        "subtitle": {
+          "title": "Subtitle",
+          "description": "Used by: cover.subtitle, number.caption, steps[].title, compare left/right label.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "font": {
+              "title": "Font",
+              "description": "Which of the two template fonts this role uses.",
+              "$ref": "#/$defs/fontRole",
+              "default": "heading",
+              "x-ui": {
+                "order": 1,
+                "control": "segmented",
+                "cssVar": "--subtitle-font",
+                "cssValue": "var(--font-{value})"
+              }
+            },
+            "color": {
+              "title": "Color",
+              "description": "Palette color for this role.",
+              "$ref": "#/$defs/paletteColor",
+              "default": "text",
+              "x-ui": {
+                "order": 2,
+                "control": "swatch",
+                "cssVar": "--subtitle-color",
+                "cssValue": "var(--color-{value})"
+              }
+            },
+            "size": {
+              "title": "Size",
+              "description": "Font size on a 1080×1350 slide.",
+              "type": "integer",
+              "minimum": 20,
+              "maximum": 96,
+              "default": 40,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 1,
+                "cssVar": "--subtitle-size",
+                "cssValue": "{value}px"
+              }
+            },
+            "lineHeight": {
+              "title": "Line height",
+              "description": "Unitless multiplier of the font size.",
+              "type": "number",
+              "minimum": 0.8,
+              "maximum": 2,
+              "default": 1.25,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "×",
+                "step": 0.05,
+                "cssVar": "--subtitle-line-height",
+                "cssValue": "{value}"
+              }
+            },
+            "letterSpacing": {
+              "title": "Letter spacing",
+              "description": "Tracking in em.",
+              "type": "number",
+              "minimum": -0.1,
+              "maximum": 0.4,
+              "default": 0,
+              "x-ui": {
+                "order": 5,
+                "control": "slider",
+                "unit": "em",
+                "step": 0.01,
+                "cssVar": "--subtitle-letter-spacing",
+                "cssValue": "{value}em"
+              }
+            },
+            "weight": {
+              "title": "Weight",
+              "description": "Font weight. Only the weights available in the chosen family are valid.",
+              "$ref": "#/$defs/fontWeight",
+              "default": 400,
+              "x-ui": {
+                "order": 6,
+                "control": "select",
+                "optionsFrom": {
+                  "fontRoleField": "font",
+                  "meta": "weights"
+                },
+                "cssVar": "--subtitle-weight",
+                "cssValue": "{value}"
+              }
+            },
+            "style": {
+              "title": "Italic",
+              "description": "Italic or normal. Disabled when the chosen family has no italic.",
+              "$ref": "#/$defs/fontStyle",
+              "default": "italic",
+              "x-ui": {
+                "order": 7,
+                "control": "toggle",
+                "onValue": "italic",
+                "offValue": "normal",
+                "enabledWhen": {
+                  "fontRoleField": "font",
+                  "meta": "italic",
+                  "equals": true
+                },
+                "cssVar": "--subtitle-style",
+                "cssValue": "{value}"
+              }
+            },
+            "transform": {
+              "title": "Case",
+              "description": "Text transform.",
+              "$ref": "#/$defs/textTransform",
+              "default": "none",
+              "x-ui": {
+                "order": 8,
+                "control": "segmented",
+                "cssVar": "--subtitle-transform",
+                "cssValue": "{value}"
+              }
+            },
+            "align": {
+              "title": "Alignment",
+              "description": "Horizontal text alignment.",
+              "$ref": "#/$defs/textAlign",
+              "default": "left",
+              "x-ui": {
+                "order": 9,
+                "control": "segmented",
+                "icons": true,
+                "cssVar": "--subtitle-align",
+                "cssValue": "{value}"
+              }
+            }
+          },
+          "default": {
+            "font": "heading",
+            "color": "text",
+            "size": 40,
+            "lineHeight": 1.25,
+            "letterSpacing": 0,
+            "weight": 400,
+            "style": "italic",
+            "transform": "none",
+            "align": "left"
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 2,
+            "collapsed": true
+          }
+        },
+        "body": {
+          "title": "Body",
+          "description": "Used by: text.body, number.body, steps[].text, compare items, myth.fact, tip.note, closing.body.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "font": {
+              "title": "Font",
+              "description": "Which of the two template fonts this role uses.",
+              "$ref": "#/$defs/fontRole",
+              "default": "body",
+              "x-ui": {
+                "order": 1,
+                "control": "segmented",
+                "cssVar": "--body-font",
+                "cssValue": "var(--font-{value})"
+              }
+            },
+            "color": {
+              "title": "Color",
+              "description": "Palette color for this role.",
+              "$ref": "#/$defs/paletteColor",
+              "default": "text",
+              "x-ui": {
+                "order": 2,
+                "control": "swatch",
+                "cssVar": "--body-color",
+                "cssValue": "var(--color-{value})"
+              }
+            },
+            "size": {
+              "title": "Size",
+              "description": "Font size on a 1080×1350 slide.",
+              "type": "integer",
+              "minimum": 20,
+              "maximum": 64,
+              "default": 32,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 1,
+                "cssVar": "--body-size",
+                "cssValue": "{value}px"
+              }
+            },
+            "lineHeight": {
+              "title": "Line height",
+              "description": "Unitless multiplier of the font size.",
+              "type": "number",
+              "minimum": 0.8,
+              "maximum": 2,
+              "default": 1.45,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "×",
+                "step": 0.05,
+                "cssVar": "--body-line-height",
+                "cssValue": "{value}"
+              }
+            },
+            "letterSpacing": {
+              "title": "Letter spacing",
+              "description": "Tracking in em.",
+              "type": "number",
+              "minimum": -0.1,
+              "maximum": 0.4,
+              "default": 0,
+              "x-ui": {
+                "order": 5,
+                "control": "slider",
+                "unit": "em",
+                "step": 0.01,
+                "cssVar": "--body-letter-spacing",
+                "cssValue": "{value}em"
+              }
+            },
+            "weight": {
+              "title": "Weight",
+              "description": "Font weight. Only the weights available in the chosen family are valid.",
+              "$ref": "#/$defs/fontWeight",
+              "default": 400,
+              "x-ui": {
+                "order": 6,
+                "control": "select",
+                "optionsFrom": {
+                  "fontRoleField": "font",
+                  "meta": "weights"
+                },
+                "cssVar": "--body-weight",
+                "cssValue": "{value}"
+              }
+            },
+            "style": {
+              "title": "Italic",
+              "description": "Italic or normal. Disabled when the chosen family has no italic.",
+              "$ref": "#/$defs/fontStyle",
+              "default": "normal",
+              "x-ui": {
+                "order": 7,
+                "control": "toggle",
+                "onValue": "italic",
+                "offValue": "normal",
+                "enabledWhen": {
+                  "fontRoleField": "font",
+                  "meta": "italic",
+                  "equals": true
+                },
+                "cssVar": "--body-style",
+                "cssValue": "{value}"
+              }
+            },
+            "transform": {
+              "title": "Case",
+              "description": "Text transform.",
+              "$ref": "#/$defs/textTransform",
+              "default": "none",
+              "x-ui": {
+                "order": 8,
+                "control": "segmented",
+                "cssVar": "--body-transform",
+                "cssValue": "{value}"
+              }
+            },
+            "align": {
+              "title": "Alignment",
+              "description": "Horizontal text alignment.",
+              "$ref": "#/$defs/textAlign",
+              "default": "left",
+              "x-ui": {
+                "order": 9,
+                "control": "segmented",
+                "icons": true,
+                "cssVar": "--body-align",
+                "cssValue": "{value}"
+              }
+            }
+          },
+          "default": {
+            "font": "body",
+            "color": "text",
+            "size": 32,
+            "lineHeight": 1.45,
+            "letterSpacing": 0,
+            "weight": 400,
+            "style": "normal",
+            "transform": "none",
+            "align": "left"
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 3,
+            "collapsed": true
+          }
+        },
+        "kicker": {
+          "title": "Kicker",
+          "description": "Used by: every kicker, closing.cta.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "font": {
+              "title": "Font",
+              "description": "Which of the two template fonts this role uses.",
+              "$ref": "#/$defs/fontRole",
+              "default": "body",
+              "x-ui": {
+                "order": 1,
+                "control": "segmented",
+                "cssVar": "--kicker-font",
+                "cssValue": "var(--font-{value})"
+              }
+            },
+            "color": {
+              "title": "Color",
+              "description": "Palette color for this role.",
+              "$ref": "#/$defs/paletteColor",
+              "default": "accent",
+              "x-ui": {
+                "order": 2,
+                "control": "swatch",
+                "cssVar": "--kicker-color",
+                "cssValue": "var(--color-{value})"
+              }
+            },
+            "size": {
+              "title": "Size",
+              "description": "Font size on a 1080×1350 slide.",
+              "type": "integer",
+              "minimum": 14,
+              "maximum": 48,
+              "default": 22,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 1,
+                "cssVar": "--kicker-size",
+                "cssValue": "{value}px"
+              }
+            },
+            "lineHeight": {
+              "title": "Line height",
+              "description": "Unitless multiplier of the font size.",
+              "type": "number",
+              "minimum": 0.8,
+              "maximum": 2,
+              "default": 1.2,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "×",
+                "step": 0.05,
+                "cssVar": "--kicker-line-height",
+                "cssValue": "{value}"
+              }
+            },
+            "letterSpacing": {
+              "title": "Letter spacing",
+              "description": "Tracking in em.",
+              "type": "number",
+              "minimum": -0.1,
+              "maximum": 0.4,
+              "default": 0.16,
+              "x-ui": {
+                "order": 5,
+                "control": "slider",
+                "unit": "em",
+                "step": 0.01,
+                "cssVar": "--kicker-letter-spacing",
+                "cssValue": "{value}em"
+              }
+            },
+            "weight": {
+              "title": "Weight",
+              "description": "Font weight. Only the weights available in the chosen family are valid.",
+              "$ref": "#/$defs/fontWeight",
+              "default": 700,
+              "x-ui": {
+                "order": 6,
+                "control": "select",
+                "optionsFrom": {
+                  "fontRoleField": "font",
+                  "meta": "weights"
+                },
+                "cssVar": "--kicker-weight",
+                "cssValue": "{value}"
+              }
+            },
+            "style": {
+              "title": "Italic",
+              "description": "Italic or normal. Disabled when the chosen family has no italic.",
+              "$ref": "#/$defs/fontStyle",
+              "default": "normal",
+              "x-ui": {
+                "order": 7,
+                "control": "toggle",
+                "onValue": "italic",
+                "offValue": "normal",
+                "enabledWhen": {
+                  "fontRoleField": "font",
+                  "meta": "italic",
+                  "equals": true
+                },
+                "cssVar": "--kicker-style",
+                "cssValue": "{value}"
+              }
+            },
+            "transform": {
+              "title": "Case",
+              "description": "Text transform.",
+              "$ref": "#/$defs/textTransform",
+              "default": "uppercase",
+              "x-ui": {
+                "order": 8,
+                "control": "segmented",
+                "cssVar": "--kicker-transform",
+                "cssValue": "{value}"
+              }
+            },
+            "align": {
+              "title": "Alignment",
+              "description": "Horizontal text alignment.",
+              "$ref": "#/$defs/textAlign",
+              "default": "left",
+              "x-ui": {
+                "order": 9,
+                "control": "segmented",
+                "icons": true,
+                "cssVar": "--kicker-align",
+                "cssValue": "{value}"
+              }
+            }
+          },
+          "default": {
+            "font": "body",
+            "color": "accent",
+            "size": 22,
+            "lineHeight": 1.2,
+            "letterSpacing": 0.16,
+            "weight": 700,
+            "style": "normal",
+            "transform": "uppercase",
+            "align": "left"
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 4,
+            "collapsed": true
+          }
+        },
+        "number": {
+          "title": "Number",
+          "description": "Used by: number.value.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "font": {
+              "title": "Font",
+              "description": "Which of the two template fonts this role uses.",
+              "$ref": "#/$defs/fontRole",
+              "default": "heading",
+              "x-ui": {
+                "order": 1,
+                "control": "segmented",
+                "cssVar": "--number-font",
+                "cssValue": "var(--font-{value})"
+              }
+            },
+            "color": {
+              "title": "Color",
+              "description": "Palette color for this role.",
+              "$ref": "#/$defs/paletteColor",
+              "default": "accent",
+              "x-ui": {
+                "order": 2,
+                "control": "swatch",
+                "cssVar": "--number-color",
+                "cssValue": "var(--color-{value})"
+              }
+            },
+            "size": {
+              "title": "Size",
+              "description": "Font size on a 1080×1350 slide.",
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 480,
+              "default": 220,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 1,
+                "cssVar": "--number-size",
+                "cssValue": "{value}px"
+              }
+            },
+            "lineHeight": {
+              "title": "Line height",
+              "description": "Unitless multiplier of the font size.",
+              "type": "number",
+              "minimum": 0.8,
+              "maximum": 2,
+              "default": 0.95,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "×",
+                "step": 0.05,
+                "cssVar": "--number-line-height",
+                "cssValue": "{value}"
+              }
+            },
+            "letterSpacing": {
+              "title": "Letter spacing",
+              "description": "Tracking in em.",
+              "type": "number",
+              "minimum": -0.1,
+              "maximum": 0.4,
+              "default": -0.03,
+              "x-ui": {
+                "order": 5,
+                "control": "slider",
+                "unit": "em",
+                "step": 0.01,
+                "cssVar": "--number-letter-spacing",
+                "cssValue": "{value}em"
+              }
+            },
+            "weight": {
+              "title": "Weight",
+              "description": "Font weight. Only the weights available in the chosen family are valid.",
+              "$ref": "#/$defs/fontWeight",
+              "default": 600,
+              "x-ui": {
+                "order": 6,
+                "control": "select",
+                "optionsFrom": {
+                  "fontRoleField": "font",
+                  "meta": "weights"
+                },
+                "cssVar": "--number-weight",
+                "cssValue": "{value}"
+              }
+            },
+            "style": {
+              "title": "Italic",
+              "description": "Italic or normal. Disabled when the chosen family has no italic.",
+              "$ref": "#/$defs/fontStyle",
+              "default": "normal",
+              "x-ui": {
+                "order": 7,
+                "control": "toggle",
+                "onValue": "italic",
+                "offValue": "normal",
+                "enabledWhen": {
+                  "fontRoleField": "font",
+                  "meta": "italic",
+                  "equals": true
+                },
+                "cssVar": "--number-style",
+                "cssValue": "{value}"
+              }
+            },
+            "transform": {
+              "title": "Case",
+              "description": "Text transform.",
+              "$ref": "#/$defs/textTransform",
+              "default": "none",
+              "x-ui": {
+                "order": 8,
+                "control": "segmented",
+                "cssVar": "--number-transform",
+                "cssValue": "{value}"
+              }
+            },
+            "align": {
+              "title": "Alignment",
+              "description": "Horizontal text alignment.",
+              "$ref": "#/$defs/textAlign",
+              "default": "left",
+              "x-ui": {
+                "order": 9,
+                "control": "segmented",
+                "icons": true,
+                "cssVar": "--number-align",
+                "cssValue": "{value}"
+              }
+            }
+          },
+          "default": {
+            "font": "heading",
+            "color": "accent",
+            "size": 220,
+            "lineHeight": 0.95,
+            "letterSpacing": -0.03,
+            "weight": 600,
+            "style": "normal",
+            "transform": "none",
+            "align": "left"
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 5,
+            "collapsed": true
+          }
+        },
+        "meta": {
+          "title": "Meta",
+          "description": "Used by: handle, category, page number, swipe hint, step index, Myth/Fact labels.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "font": {
+              "title": "Font",
+              "description": "Which of the two template fonts this role uses.",
+              "$ref": "#/$defs/fontRole",
+              "default": "body",
+              "x-ui": {
+                "order": 1,
+                "control": "segmented",
+                "cssVar": "--meta-font",
+                "cssValue": "var(--font-{value})"
+              }
+            },
+            "color": {
+              "title": "Color",
+              "description": "Palette color for this role.",
+              "$ref": "#/$defs/paletteColor",
+              "default": "muted",
+              "x-ui": {
+                "order": 2,
+                "control": "swatch",
+                "cssVar": "--meta-color",
+                "cssValue": "var(--color-{value})"
+              }
+            },
+            "size": {
+              "title": "Size",
+              "description": "Font size on a 1080×1350 slide.",
+              "type": "integer",
+              "minimum": 14,
+              "maximum": 40,
+              "default": 20,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 1,
+                "cssVar": "--meta-size",
+                "cssValue": "{value}px"
+              }
+            },
+            "lineHeight": {
+              "title": "Line height",
+              "description": "Unitless multiplier of the font size.",
+              "type": "number",
+              "minimum": 0.8,
+              "maximum": 2,
+              "default": 1.2,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "×",
+                "step": 0.05,
+                "cssVar": "--meta-line-height",
+                "cssValue": "{value}"
+              }
+            },
+            "letterSpacing": {
+              "title": "Letter spacing",
+              "description": "Tracking in em.",
+              "type": "number",
+              "minimum": -0.1,
+              "maximum": 0.4,
+              "default": 0.08,
+              "x-ui": {
+                "order": 5,
+                "control": "slider",
+                "unit": "em",
+                "step": 0.01,
+                "cssVar": "--meta-letter-spacing",
+                "cssValue": "{value}em"
+              }
+            },
+            "weight": {
+              "title": "Weight",
+              "description": "Font weight. Only the weights available in the chosen family are valid.",
+              "$ref": "#/$defs/fontWeight",
+              "default": 500,
+              "x-ui": {
+                "order": 6,
+                "control": "select",
+                "optionsFrom": {
+                  "fontRoleField": "font",
+                  "meta": "weights"
+                },
+                "cssVar": "--meta-weight",
+                "cssValue": "{value}"
+              }
+            },
+            "style": {
+              "title": "Italic",
+              "description": "Italic or normal. Disabled when the chosen family has no italic.",
+              "$ref": "#/$defs/fontStyle",
+              "default": "normal",
+              "x-ui": {
+                "order": 7,
+                "control": "toggle",
+                "onValue": "italic",
+                "offValue": "normal",
+                "enabledWhen": {
+                  "fontRoleField": "font",
+                  "meta": "italic",
+                  "equals": true
+                },
+                "cssVar": "--meta-style",
+                "cssValue": "{value}"
+              }
+            },
+            "transform": {
+              "title": "Case",
+              "description": "Text transform.",
+              "$ref": "#/$defs/textTransform",
+              "default": "uppercase",
+              "x-ui": {
+                "order": 8,
+                "control": "segmented",
+                "cssVar": "--meta-transform",
+                "cssValue": "{value}"
+              }
+            },
+            "align": {
+              "title": "Alignment",
+              "description": "Horizontal text alignment.",
+              "$ref": "#/$defs/textAlign",
+              "default": "left",
+              "x-ui": {
+                "order": 9,
+                "control": "segmented",
+                "icons": true,
+                "cssVar": "--meta-align",
+                "cssValue": "{value}"
+              }
+            }
+          },
+          "default": {
+            "font": "body",
+            "color": "muted",
+            "size": 20,
+            "lineHeight": 1.2,
+            "letterSpacing": 0.08,
+            "weight": 500,
+            "style": "normal",
+            "transform": "uppercase",
+            "align": "left"
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 6,
+            "collapsed": true
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 3
+      },
+      "default": {
+        "title": {
+          "font": "heading",
+          "color": "text",
+          "size": 84,
+          "lineHeight": 1.05,
+          "letterSpacing": -0.02,
+          "weight": 600,
+          "style": "normal",
+          "transform": "none",
+          "align": "left"
+        },
+        "subtitle": {
+          "font": "heading",
+          "color": "text",
+          "size": 40,
+          "lineHeight": 1.25,
+          "letterSpacing": 0,
+          "weight": 400,
+          "style": "italic",
+          "transform": "none",
+          "align": "left"
+        },
+        "body": {
+          "font": "body",
+          "color": "text",
+          "size": 32,
+          "lineHeight": 1.45,
+          "letterSpacing": 0,
+          "weight": 400,
+          "style": "normal",
+          "transform": "none",
+          "align": "left"
+        },
+        "kicker": {
+          "font": "body",
+          "color": "accent",
+          "size": 22,
+          "lineHeight": 1.2,
+          "letterSpacing": 0.16,
+          "weight": 700,
+          "style": "normal",
+          "transform": "uppercase",
+          "align": "left"
+        },
+        "number": {
+          "font": "heading",
+          "color": "accent",
+          "size": 220,
+          "lineHeight": 0.95,
+          "letterSpacing": -0.03,
+          "weight": 600,
+          "style": "normal",
+          "transform": "none",
+          "align": "left"
+        },
+        "meta": {
+          "font": "body",
+          "color": "muted",
+          "size": 20,
+          "lineHeight": 1.2,
+          "letterSpacing": 0.08,
+          "weight": 500,
+          "style": "normal",
+          "transform": "uppercase",
+          "align": "left"
+        }
+      }
+    },
+    "spacing": {
+      "title": "Spacing",
+      "description": "Padding and margin per typographic role, editable on the X and Y axes.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "description": "Used by: cover.title, text.title, steps.title, compare.title, myth.myth, tip.tip, closing.title.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paddingX": {
+              "title": "Padding X",
+              "description": "Inner space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 1,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--title-padding-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "paddingY": {
+              "title": "Padding Y",
+              "description": "Inner space top and bottom.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 2,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--title-padding-y",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginX": {
+              "title": "Margin X",
+              "description": "Outer space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--title-margin-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginY": {
+              "title": "Margin Y",
+              "description": "Outer space top and bottom (adds up between stacked elements).",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 14,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--title-margin-y",
+                "cssValue": "{value}px"
+              }
+            }
+          },
+          "default": {
+            "paddingX": 0,
+            "paddingY": 0,
+            "marginX": 0,
+            "marginY": 14
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 1,
+            "collapsed": false
+          }
+        },
+        "subtitle": {
+          "title": "Subtitle",
+          "description": "Used by: cover.subtitle, number.caption, steps[].title, compare left/right label.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paddingX": {
+              "title": "Padding X",
+              "description": "Inner space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 1,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--subtitle-padding-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "paddingY": {
+              "title": "Padding Y",
+              "description": "Inner space top and bottom.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 2,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--subtitle-padding-y",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginX": {
+              "title": "Margin X",
+              "description": "Outer space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--subtitle-margin-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginY": {
+              "title": "Margin Y",
+              "description": "Outer space top and bottom (adds up between stacked elements).",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 10,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--subtitle-margin-y",
+                "cssValue": "{value}px"
+              }
+            }
+          },
+          "default": {
+            "paddingX": 0,
+            "paddingY": 0,
+            "marginX": 0,
+            "marginY": 10
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 2,
+            "collapsed": true
+          }
+        },
+        "body": {
+          "title": "Body",
+          "description": "Used by: text.body, number.body, steps[].text, compare items, myth.fact, tip.note, closing.body.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paddingX": {
+              "title": "Padding X",
+              "description": "Inner space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 1,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--body-padding-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "paddingY": {
+              "title": "Padding Y",
+              "description": "Inner space top and bottom.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 2,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--body-padding-y",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginX": {
+              "title": "Margin X",
+              "description": "Outer space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--body-margin-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginY": {
+              "title": "Margin Y",
+              "description": "Outer space top and bottom (adds up between stacked elements).",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 10,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--body-margin-y",
+                "cssValue": "{value}px"
+              }
+            }
+          },
+          "default": {
+            "paddingX": 0,
+            "paddingY": 0,
+            "marginX": 0,
+            "marginY": 10
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 3,
+            "collapsed": true
+          }
+        },
+        "kicker": {
+          "title": "Kicker",
+          "description": "Used by: every kicker, closing.cta.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paddingX": {
+              "title": "Padding X",
+              "description": "Inner space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 1,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--kicker-padding-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "paddingY": {
+              "title": "Padding Y",
+              "description": "Inner space top and bottom.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 2,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--kicker-padding-y",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginX": {
+              "title": "Margin X",
+              "description": "Outer space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--kicker-margin-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginY": {
+              "title": "Margin Y",
+              "description": "Outer space top and bottom (adds up between stacked elements).",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 18,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--kicker-margin-y",
+                "cssValue": "{value}px"
+              }
+            }
+          },
+          "default": {
+            "paddingX": 0,
+            "paddingY": 0,
+            "marginX": 0,
+            "marginY": 18
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 4,
+            "collapsed": true
+          }
+        },
+        "number": {
+          "title": "Number",
+          "description": "Used by: number.value.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paddingX": {
+              "title": "Padding X",
+              "description": "Inner space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 1,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--number-padding-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "paddingY": {
+              "title": "Padding Y",
+              "description": "Inner space top and bottom.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 2,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--number-padding-y",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginX": {
+              "title": "Margin X",
+              "description": "Outer space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--number-margin-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginY": {
+              "title": "Margin Y",
+              "description": "Outer space top and bottom (adds up between stacked elements).",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 6,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--number-margin-y",
+                "cssValue": "{value}px"
+              }
+            }
+          },
+          "default": {
+            "paddingX": 0,
+            "paddingY": 0,
+            "marginX": 0,
+            "marginY": 6
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 5,
+            "collapsed": true
+          }
+        },
+        "meta": {
+          "title": "Meta",
+          "description": "Used by: handle, category, page number, swipe hint, step index, Myth/Fact labels.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paddingX": {
+              "title": "Padding X",
+              "description": "Inner space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 1,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--meta-padding-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "paddingY": {
+              "title": "Padding Y",
+              "description": "Inner space top and bottom.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 2,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--meta-padding-y",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginX": {
+              "title": "Margin X",
+              "description": "Outer space left and right.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 3,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--meta-margin-x",
+                "cssValue": "{value}px"
+              }
+            },
+            "marginY": {
+              "title": "Margin Y",
+              "description": "Outer space top and bottom (adds up between stacked elements).",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 240,
+              "default": 0,
+              "x-ui": {
+                "order": 4,
+                "control": "slider",
+                "unit": "px",
+                "step": 2,
+                "cssVar": "--meta-margin-y",
+                "cssValue": "{value}px"
+              }
+            }
+          },
+          "default": {
+            "paddingX": 0,
+            "paddingY": 0,
+            "marginX": 0,
+            "marginY": 0
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 6,
+            "collapsed": true
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 4
+      },
+      "default": {
+        "title": {
+          "paddingX": 0,
+          "paddingY": 0,
+          "marginX": 0,
+          "marginY": 14
+        },
+        "subtitle": {
+          "paddingX": 0,
+          "paddingY": 0,
+          "marginX": 0,
+          "marginY": 10
+        },
+        "body": {
+          "paddingX": 0,
+          "paddingY": 0,
+          "marginX": 0,
+          "marginY": 10
+        },
+        "kicker": {
+          "paddingX": 0,
+          "paddingY": 0,
+          "marginX": 0,
+          "marginY": 18
+        },
+        "number": {
+          "paddingX": 0,
+          "paddingY": 0,
+          "marginX": 0,
+          "marginY": 6
+        },
+        "meta": {
+          "paddingX": 0,
+          "paddingY": 0,
+          "marginX": 0,
+          "marginY": 0
+        }
+      }
+    },
+    "layout": {
+      "title": "Layout",
+      "description": "Slide-level spacing and decoration sizes.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "paddingX": {
+          "title": "Slide padding X",
+          "description": "Left and right inner space of every slide.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 240,
+          "default": 96,
+          "x-ui": {
+            "order": 1,
+            "control": "slider",
+            "unit": "px",
+            "step": 2,
+            "cssVar": "--layout-padding-x",
+            "cssValue": "{value}px"
+          }
+        },
+        "paddingY": {
+          "title": "Slide padding Y",
+          "description": "Top and bottom inner space of every slide.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 240,
+          "default": 80,
+          "x-ui": {
+            "order": 2,
+            "control": "slider",
+            "unit": "px",
+            "step": 2,
+            "cssVar": "--layout-padding-y",
+            "cssValue": "{value}px"
+          }
+        },
+        "coverTitleScale": {
+          "title": "Cover title scale",
+          "description": "Multiplier applied to the title size on the cover.",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 2,
+          "default": 1.3,
+          "x-ui": {
+            "order": 3,
+            "control": "slider",
+            "unit": "×",
+            "step": 0.05,
+            "cssVar": "--layout-cover-title-scale",
+            "cssValue": "{value}"
+          }
+        },
+        "frameInset": {
+          "title": "Frame inset",
+          "description": "Distance of the frame from the slide edge (frame must be visible).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 120,
+          "default": 28,
+          "x-ui": {
+            "order": 4,
+            "control": "slider",
+            "unit": "px",
+            "step": 2,
+            "cssVar": "--layout-frame-inset",
+            "cssValue": "{value}px",
+            "enabledWhen": {
+              "path": "visibility.global.frame",
+              "equals": true
+            }
+          }
+        },
+        "frameWidth": {
+          "title": "Frame width",
+          "description": "Stroke width of the frame (frame must be visible).",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "default": 2,
+          "x-ui": {
+            "order": 5,
+            "control": "slider",
+            "unit": "px",
+            "step": 1,
+            "cssVar": "--layout-frame-width",
+            "cssValue": "{value}px",
+            "enabledWhen": {
+              "path": "visibility.global.frame",
+              "equals": true
+            }
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 5
+      },
+      "default": {
+        "paddingX": 96,
+        "paddingY": 80,
+        "coverTitleScale": 1.3,
+        "frameInset": 28,
+        "frameWidth": 2
+      }
+    },
+    "visibility": {
+      "title": "Visibility",
+      "description": "Show (true) or hide (false) optional elements and decorations.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "global": {
+          "title": "All slides",
+          "description": "Elements present on every slide.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "handle": {
+              "title": "Handle",
+              "description": "Instagram handle, top left.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 1,
+                "control": "switch",
+                "cssVar": "--show-handle",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "category": {
+              "title": "Category",
+              "description": "Content category, top right.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 2,
+                "control": "switch",
+                "cssVar": "--show-category",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "pageNumber": {
+              "title": "Page number",
+              "description": "Slide number, bottom right.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 3,
+                "control": "switch",
+                "cssVar": "--show-page-number",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "pageTotal": {
+              "title": "Page total",
+              "description": "The “/ 08” after the page number.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 4,
+                "control": "switch",
+                "cssVar": "--show-page-total",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                },
+                "enabledWhen": {
+                  "path": "visibility.global.pageNumber",
+                  "equals": true
+                }
+              }
+            },
+            "kicker": {
+              "title": "Kicker",
+              "description": "Label above the title.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 5,
+                "control": "switch",
+                "cssVar": "--show-kicker",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "kickerRule": {
+              "title": "Kicker rule",
+              "description": "Short line before the kicker.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 6,
+                "control": "switch",
+                "cssVar": "--show-kicker-rule",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                },
+                "enabledWhen": {
+                  "path": "visibility.global.kicker",
+                  "equals": true
+                }
+              }
+            },
+            "progressBar": {
+              "title": "Progress bar",
+              "description": "Bar at the bottom that fills slide by slide.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 7,
+                "control": "switch",
+                "cssVar": "--show-progress-bar",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "frame": {
+              "title": "Frame",
+              "description": "Thin border inset from the slide edge.",
+              "type": "boolean",
+              "default": false,
+              "x-ui": {
+                "order": 8,
+                "control": "switch",
+                "cssVar": "--show-frame",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "watermark": {
+              "title": "Watermark",
+              "description": "Huge slide number in the surface color behind the content.",
+              "type": "boolean",
+              "default": false,
+              "x-ui": {
+                "order": 9,
+                "control": "switch",
+                "cssVar": "--show-watermark",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            }
+          },
+          "default": {
+            "handle": true,
+            "category": true,
+            "pageNumber": true,
+            "pageTotal": true,
+            "kicker": true,
+            "kickerRule": true,
+            "progressBar": true,
+            "frame": false,
+            "watermark": false
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 1,
+            "collapsed": false,
+            "previewSlide": null
+          }
+        },
+        "cover": {
+          "title": "Cover",
+          "description": "Elements of the cover slide.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "subtitle": {
+              "title": "Subtitle",
+              "description": "Line below the hook.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 1,
+                "control": "switch",
+                "cssVar": "--show-cover-subtitle",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "slideHint": {
+              "title": "Swipe hint",
+              "description": "“Swipe” at the bottom right.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 2,
+                "control": "switch",
+                "cssVar": "--show-cover-slide-hint",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "slideHintArrow": {
+              "title": "Swipe arrow",
+              "description": "Arrow after “Swipe”.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 3,
+                "control": "switch",
+                "cssVar": "--show-cover-slide-hint-arrow",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                },
+                "enabledWhen": {
+                  "path": "visibility.cover.slideHint",
+                  "equals": true
+                }
+              }
+            },
+            "pageNumber": {
+              "title": "Page number",
+              "description": "Page number on the cover too.",
+              "type": "boolean",
+              "default": false,
+              "x-ui": {
+                "order": 4,
+                "control": "switch",
+                "cssVar": "--show-cover-page-number",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                },
+                "enabledWhen": {
+                  "path": "visibility.global.pageNumber",
+                  "equals": true
+                }
+              }
+            }
+          },
+          "default": {
+            "subtitle": true,
+            "slideHint": true,
+            "slideHintArrow": true,
+            "pageNumber": false
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 2,
+            "collapsed": true,
+            "previewSlide": "cover"
+          }
+        },
+        "text": {
+          "title": "Text",
+          "description": "Elements of the text slide.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "title": "Title",
+              "description": "Title above the paragraph.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 1,
+                "control": "switch",
+                "cssVar": "--show-text-title",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            }
+          },
+          "default": {
+            "title": true
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 3,
+            "collapsed": true,
+            "previewSlide": "text"
+          }
+        },
+        "number": {
+          "title": "Number",
+          "description": "Elements of the number slide.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "caption": {
+              "title": "Caption",
+              "description": "Caption below the number.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 1,
+                "control": "switch",
+                "cssVar": "--show-number-caption",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "body": {
+              "title": "Body",
+              "description": "Paragraph below the caption.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 2,
+                "control": "switch",
+                "cssVar": "--show-number-body",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            }
+          },
+          "default": {
+            "caption": true,
+            "body": true
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 4,
+            "collapsed": true,
+            "previewSlide": "number"
+          }
+        },
+        "steps": {
+          "title": "Steps",
+          "description": "Elements of the steps slide.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "index": {
+              "title": "Step numbers",
+              "description": "01, 02… before each step.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 1,
+                "control": "switch",
+                "cssVar": "--show-steps-index",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "descriptions": {
+              "title": "Descriptions",
+              "description": "Text below each step title.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 2,
+                "control": "switch",
+                "cssVar": "--show-steps-descriptions",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "dividers": {
+              "title": "Dividers",
+              "description": "Lines between steps.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 3,
+                "control": "switch",
+                "cssVar": "--show-steps-dividers",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            }
+          },
+          "default": {
+            "index": true,
+            "descriptions": true,
+            "dividers": true
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 5,
+            "collapsed": true,
+            "previewSlide": "steps"
+          }
+        },
+        "compare": {
+          "title": "Compare",
+          "description": "Elements of the compare slide.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "labels": {
+              "title": "Column labels",
+              "description": "Names of the two columns.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 1,
+                "control": "switch",
+                "cssVar": "--show-compare-labels",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "divider": {
+              "title": "Divider",
+              "description": "Vertical line between the columns.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 2,
+                "control": "switch",
+                "cssVar": "--show-compare-divider",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "surface": {
+              "title": "Column background",
+              "description": "Surface-colored background behind each column.",
+              "type": "boolean",
+              "default": false,
+              "x-ui": {
+                "order": 3,
+                "control": "switch",
+                "cssVar": "--show-compare-surface",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "bullets": {
+              "title": "Bullets",
+              "description": "Dash before each item.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 4,
+                "control": "switch",
+                "cssVar": "--show-compare-bullets",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            }
+          },
+          "default": {
+            "labels": true,
+            "divider": true,
+            "surface": false,
+            "bullets": true
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 6,
+            "collapsed": true,
+            "previewSlide": "compare"
+          }
+        },
+        "myth": {
+          "title": "Myth",
+          "description": "Elements of the myth slide.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "labels": {
+              "title": "Labels",
+              "description": "“Myth” and “Fact” labels.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 1,
+                "control": "switch",
+                "cssVar": "--show-myth-labels",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "strike": {
+              "title": "Strikethrough",
+              "description": "Line through the wrong belief.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 2,
+                "control": "switch",
+                "cssVar": "--show-myth-strike",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "factSurface": {
+              "title": "Fact background",
+              "description": "Surface-colored box behind the fact.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 3,
+                "control": "switch",
+                "cssVar": "--show-myth-fact-surface",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            }
+          },
+          "default": {
+            "labels": true,
+            "strike": true,
+            "factSurface": true
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 7,
+            "collapsed": true,
+            "previewSlide": "myth"
+          }
+        },
+        "tip": {
+          "title": "Tip",
+          "description": "Elements of the tip slide.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mark": {
+              "title": "Mark",
+              "description": "Big accent asterisk above the tip.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 1,
+                "control": "switch",
+                "cssVar": "--show-tip-mark",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "note": {
+              "title": "Note",
+              "description": "Detail below the tip.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 2,
+                "control": "switch",
+                "cssVar": "--show-tip-note",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            }
+          },
+          "default": {
+            "mark": true,
+            "note": true
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 8,
+            "collapsed": true,
+            "previewSlide": "tip"
+          }
+        },
+        "closing": {
+          "title": "Closing",
+          "description": "Elements of the closing slide.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "body": {
+              "title": "Body",
+              "description": "Sentence below the recap.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 1,
+                "control": "switch",
+                "cssVar": "--show-closing-body",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "cta": {
+              "title": "CTA",
+              "description": "Call to action.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 2,
+                "control": "switch",
+                "cssVar": "--show-closing-cta",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            },
+            "ctaArrow": {
+              "title": "CTA arrow",
+              "description": "Arrow after the CTA.",
+              "type": "boolean",
+              "default": true,
+              "x-ui": {
+                "order": 3,
+                "control": "switch",
+                "cssVar": "--show-closing-cta-arrow",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                },
+                "enabledWhen": {
+                  "path": "visibility.closing.cta",
+                  "equals": true
+                }
+              }
+            },
+            "handle": {
+              "title": "Handle",
+              "description": "Handle below the CTA.",
+              "type": "boolean",
+              "default": false,
+              "x-ui": {
+                "order": 4,
+                "control": "switch",
+                "cssVar": "--show-closing-handle",
+                "cssValue": {
+                  "true": "initial",
+                  "false": "none"
+                }
+              }
+            }
+          },
+          "default": {
+            "body": true,
+            "cta": true,
+            "ctaArrow": true,
+            "handle": false
+          },
+          "x-ui": {
+            "layout": "subsection",
+            "order": 9,
+            "collapsed": true,
+            "previewSlide": "closing"
+          }
+        }
+      },
+      "x-ui": {
+        "layout": "section",
+        "order": 6
+      },
+      "default": {
+        "global": {
+          "handle": true,
+          "category": true,
+          "pageNumber": true,
+          "pageTotal": true,
+          "kicker": true,
+          "kickerRule": true,
+          "progressBar": true,
+          "frame": false,
+          "watermark": false
+        },
+        "cover": {
+          "subtitle": true,
+          "slideHint": true,
+          "slideHintArrow": true,
+          "pageNumber": false
+        },
+        "text": {
+          "title": true
+        },
+        "number": {
+          "caption": true,
+          "body": true
+        },
+        "steps": {
+          "index": true,
+          "descriptions": true,
+          "dividers": true
+        },
+        "compare": {
+          "labels": true,
+          "divider": true,
+          "surface": false,
+          "bullets": true
+        },
+        "myth": {
+          "labels": true,
+          "strike": true,
+          "factSurface": true
+        },
+        "tip": {
+          "mark": true,
+          "note": true
+        },
+        "closing": {
+          "body": true,
+          "cta": true,
+          "ctaArrow": true,
+          "handle": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "color": {
+      "type": "string",
+      "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+    },
+    "fontFamily": {
+      "type": "string",
+      "enum": [
+        "Inter",
+        "Space Grotesk",
+        "IBM Plex Mono",
+        "Fraunces",
+        "Playfair Display",
+        "DM Serif Display"
+      ],
+      "x-fontMeta": {
+        "Inter": {
+          "category": "sans-serif",
+          "weights": [
+            100,
+            200,
+            300,
+            400,
+            500,
+            600,
+            700,
+            800,
+            900
+          ],
+          "italic": true
+        },
+        "Space Grotesk": {
+          "category": "sans-serif",
+          "weights": [
+            300,
+            400,
+            500,
+            600,
+            700
+          ],
+          "italic": false
+        },
+        "IBM Plex Mono": {
+          "category": "monospace",
+          "weights": [
+            100,
+            200,
+            300,
+            400,
+            500,
+            600,
+            700
+          ],
+          "italic": true
+        },
+        "Fraunces": {
+          "category": "serif",
+          "weights": [
+            100,
+            200,
+            300,
+            400,
+            500,
+            600,
+            700,
+            800,
+            900
+          ],
+          "italic": true
+        },
+        "Playfair Display": {
+          "category": "serif",
+          "weights": [
+            400,
+            500,
+            600,
+            700,
+            800,
+            900
+          ],
+          "italic": true
+        },
+        "DM Serif Display": {
+          "category": "serif",
+          "weights": [
+            400
+          ],
+          "italic": true
+        }
+      }
+    },
+    "fontFallback": {
+      "type": "string",
+      "enum": [
+        "serif",
+        "sans-serif",
+        "monospace"
+      ]
+    },
+    "fontRole": {
+      "oneOf": [
+        {
+          "const": "heading",
+          "title": "Heading"
+        },
+        {
+          "const": "body",
+          "title": "Body"
+        }
+      ]
+    },
+    "paletteColor": {
+      "oneOf": [
+        {
+          "const": "background",
+          "title": "Background"
+        },
+        {
+          "const": "text",
+          "title": "Text"
+        },
+        {
+          "const": "muted",
+          "title": "Muted"
+        },
+        {
+          "const": "accent",
+          "title": "Accent"
+        },
+        {
+          "const": "surface",
+          "title": "Surface"
+        }
+      ]
+    },
+    "fontWeight": {
+      "oneOf": [
+        {
+          "const": 100,
+          "title": "Thin"
+        },
+        {
+          "const": 200,
+          "title": "Extra light"
+        },
+        {
+          "const": 300,
+          "title": "Light"
+        },
+        {
+          "const": 400,
+          "title": "Regular"
+        },
+        {
+          "const": 500,
+          "title": "Medium"
+        },
+        {
+          "const": 600,
+          "title": "Semibold"
+        },
+        {
+          "const": 700,
+          "title": "Bold"
+        },
+        {
+          "const": 800,
+          "title": "Extra bold"
+        },
+        {
+          "const": 900,
+          "title": "Black"
+        }
+      ]
+    },
+    "fontStyle": {
+      "oneOf": [
+        {
+          "const": "normal",
+          "title": "Normal"
+        },
+        {
+          "const": "italic",
+          "title": "Italic"
+        }
+      ]
+    },
+    "textTransform": {
+      "oneOf": [
+        {
+          "const": "none",
+          "title": "Normal"
+        },
+        {
+          "const": "uppercase",
+          "title": "UPPERCASE"
+        },
+        {
+          "const": "lowercase",
+          "title": "lowercase"
+        },
+        {
+          "const": "capitalize",
+          "title": "Capitalize"
+        }
+      ]
+    },
+    "textAlign": {
+      "oneOf": [
+        {
+          "const": "left",
+          "title": "Left"
+        },
+        {
+          "const": "center",
+          "title": "Center"
+        },
+        {
+          "const": "right",
+          "title": "Right"
+        }
+      ]
+    }
+  }
+}

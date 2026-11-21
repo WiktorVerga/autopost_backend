@@ -1,0 +1,138 @@
+{
+  "name": "carousel",
+  "label": "Carousel",
+  "brief": "A swipeable post of 3 to 10 slides. Slide 1 decides whether people swipe, and fewer reach each later slide.\n- Pick the shape that fits the idea: listicle (saves), myth-buster (shares), before/after (saves, follows), framework (saves).\n- Cover: a promise with an open loop (\"most people get #3 wrong\"), a number when it fits.\n- Strongest point on slide 2 or 3. One point per slide, each standing alone. Choose the slide type that fits each point: a figure is a number slide, an order is steps, a wrong belief is a myth, two options are a compare, one action is a tip. Vary the types.\n- Aim for 5 to 8 slides: develop the idea, never pad it.\n- Closing: a recap worth saving on its own, plus one ask (save it, or send it to someone).\n- Caption: one short paragraph, no call to action (the closing slide has it).",
+  "format": {
+    "category": "Series label, 1-2 words",
+    "slides": [
+      {
+        "type": "cover",
+        "kicker": "Topic label, 1-3 words",
+        "title": "Promise with an open loop, max 8 words",
+        "subtitle": "One line that sharpens the promise"
+      },
+      {
+        "type": "text",
+        "kicker": "Label, 1-3 words",
+        "title": "The point, max 8 words",
+        "body": "1-3 short sentences"
+      },
+      {
+        "type": "number",
+        "kicker": "Label, 1-3 words",
+        "value": "The figure with its unit, max 8 characters",
+        "caption": "What it measures, one line",
+        "body": "Why it matters, 1-2 sentences"
+      },
+      {
+        "type": "steps",
+        "kicker": "Label, 1-3 words",
+        "title": "What the steps achieve, max 8 words",
+        "steps": [{ "title": "1-2 words", "text": "One short line" }]
+      },
+      {
+        "type": "compare",
+        "kicker": "Label, 1-3 words",
+        "title": "What is compared, max 8 words",
+        "left": { "label": "1-2 words", "items": ["Max 5 words"] },
+        "right": { "label": "1-2 words", "items": ["Max 5 words"] }
+      },
+      {
+        "type": "myth",
+        "kicker": "Label, 1-3 words",
+        "myth": "The wrong belief, as people say it",
+        "fact": "The truth and why, 1-2 sentences"
+      },
+      {
+        "type": "tip",
+        "kicker": "Label, 1-3 words",
+        "tip": "One instruction, max 10 words",
+        "note": "Why it works, one line"
+      },
+      {
+        "type": "closing",
+        "title": "Recap worth saving, max 12 words",
+        "body": "1-2 short sentences",
+        "cta": "One ask, max 5 words"
+      }
+    ],
+    "caption": "Hook in the first 125 characters, then a line or two of context. No hashtags",
+    "hashtags": ["One lowercase hashtag, e.g. #mokapot"]
+  },
+  "limits": {
+    "slides": [3, 10],
+    "slides[].steps": [2, 5],
+    "slides[].left.items": [1, 3],
+    "slides[].right.items": [1, 3],
+    "hashtags": [3, 5]
+  },
+  "sequence": {
+    "first": ["cover"],
+    "last": ["closing"],
+    "only_first": ["cover"],
+    "only_last": ["closing"],
+    "no_consecutive_repeat": true
+  },
+  "sample_content": {
+    "category": "How-to",
+    "slides": [
+      {
+        "type": "cover",
+        "kicker": "How-to",
+        "title": "Fill a moka pot the right way",
+        "subtitle": "Four small moves that change your morning coffee."
+      },
+      {
+        "type": "myth",
+        "kicker": "Myth busting",
+        "myth": "You should tamp the coffee down hard.",
+        "fact": "Not in a moka pot: just level it. Packed coffee makes it hard for water to pass, and the result tastes bitter and burnt."
+      },
+      {
+        "type": "steps",
+        "kicker": "How to",
+        "title": "Filling it, in order",
+        "steps": [
+          { "title": "Water", "text": "In the bottom chamber, just below the valve." },
+          { "title": "Coffee", "text": "In the filter basket, no tamping." },
+          { "title": "Level", "text": "Wipe stray grounds off the rim." },
+          { "title": "Close", "text": "Screw it shut firmly, without forcing it." }
+        ]
+      },
+      {
+        "type": "text",
+        "kicker": "Safety",
+        "title": "Why the valve matters",
+        "body": "It releases pressure if something gets blocked. If the water covers it, it can't do its job."
+      },
+      {
+        "type": "compare",
+        "kicker": "Side by side",
+        "title": "Grind: moka vs espresso",
+        "left": { "label": "Moka", "items": ["Medium, slightly gritty", "Like fine table salt"] },
+        "right": { "label": "Espresso", "items": ["Fine, almost powder", "Sticks to your fingers"] }
+      },
+      {
+        "type": "number",
+        "kicker": "By the numbers",
+        "value": "1.5 bar",
+        "caption": "Roughly the pressure inside a moka pot.",
+        "body": "Espresso uses around 9: that's why they're two different coffees."
+      },
+      {
+        "type": "tip",
+        "kicker": "The tip",
+        "tip": "Keep the heat low.",
+        "note": "Never let the flame reach past the sides of the base."
+      },
+      {
+        "type": "closing",
+        "title": "Save it for tomorrow morning",
+        "body": "Four moves, no extra gear. The moka does the rest.",
+        "cta": "Save and try it"
+      }
+    ],
+    "caption": "Your moka coffee tastes burnt? It might be how you fill it. Four small moves, in order, and the one habit to drop.",
+    "hashtags": ["#mokapot", "#coffeeathome", "#italiancoffee", "#coffeetips"]
+  }
+}
