@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 from autopost_server.api.routes.auth import router as auth_router
+from autopost_server.api.routes.beta_requests import router as beta_requests_router
 from autopost_server.api.routes.idea_collections import router as idea_collections_router
 from autopost_server.api.routes.ideas import router as ideas_router
 from autopost_server.api.routes.instagram_accounts import router as instagram_accounts_router
@@ -57,6 +58,7 @@ if settings.frontend_origin:
         allow_headers=["*"],
     )
 app.include_router(auth_router)
+app.include_router(beta_requests_router)
 app.include_router(idea_collections_router)
 app.include_router(ideas_router)
 app.include_router(instagram_accounts_router)

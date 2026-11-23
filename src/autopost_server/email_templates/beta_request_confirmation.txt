@@ -1,0 +1,23 @@
+AUTOPOST
+Invite request
+
+Request received. You're on the waiting list.
+
+Thanks for asking to join the Autopost beta. This email confirms that @{{ handle }} is on the waiting list. It hasn't been added to the beta yet, so for now it can't be connected to Autopost.
+
+We add accounts by hand. When @{{ handle }} has been added, we'll send you a second email. From that moment you can connect it from "Instagram accounts" and your programs can start publishing.
+
+What you sent us
+- Email: {{ email }}
+- Instagram: @{{ handle }}
+- Company: {{ company or "—" }}
+
+In the meantime
+You can already sign in with Google, create collections and ideas, design your templates and set up programs. They stay inactive until the account has been added and connected, so nothing reaches Instagram before then.
+{% if app_url %}
+
+Sign in to the beta: {{ app_url }}/login
+{% endif %}
+
+--
+You're receiving this because this address was used to request an invite to the Autopost beta{% if app_host %} on {{ app_host }}{% endif %}. If that wasn't you, you can ignore this email: we won't write again unless the account is added.

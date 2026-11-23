@@ -1,0 +1,16 @@
+AUTOPOST
+Nuova richiesta beta
+
+@{{ handle }} chiede un invito.
+
+È arrivata una nuova richiesta dal form della landing. Per abilitare l'account aggiungilo alla lista inviti; rispondendo a questa email scrivi direttamente a {{ email }}.
+
+Dati della richiesta
+- Email: {{ email }}
+- Instagram: @{{ handle }} ({{ instagram_url }})
+- Azienda: {{ company or "—" }}
+- Ricevuta: {{ received_at }}
+- Richiesta: #{{ request_id }}
+
+--
+Notifica automatica di Autopost per ogni richiesta di invito alla beta. La richiesta è salvata nella tabella beta_requests con id {{ request_id }}.

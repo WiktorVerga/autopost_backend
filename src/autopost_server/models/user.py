@@ -4,7 +4,8 @@ from sqlalchemy import DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from autopost_server.db import Base
-from autopost_server.models.column_types import EncryptedString
+from autopost_server.models.column_types import EncryptedString, pg_enum
+from autopost_server.models.enums import SignupMethod
 
 
 class User(Base):
@@ -16,6 +17,11 @@ class User(Base):
     password_hash: Mapped[str | None] = mapped_column(String(255))
     google_sub: Mapped[str | None] = mapped_column(String(255), unique=True)
     name: Mapped[str] = mapped_column(String(100))
+    signup_method: Mapped[SignupMethod] = mapped_column(pg_enum(SignupMethod, "signup_method"))
+    # null per gli utenti creati prima della migrazione: la data di registrazione non è nota
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     instagram_accounts: Mapped[list["InstagramAccount"]] = relationship(back_populates="user")
     idea_collections: Mapped[list["IdeaCollection"]] = relationship(back_populates="user")

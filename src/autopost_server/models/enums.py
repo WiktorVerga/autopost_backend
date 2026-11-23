@@ -29,6 +29,13 @@ class LogStatus(str, enum.Enum):
     ERROR = "error"
 
 
+class SignupMethod(str, enum.Enum):
+    """Come è stato creato l'account (non cambia se poi l'utente collega un altro metodo)."""
+
+    PASSWORD = "password"
+    GOOGLE = "google"
+
+
 class PostTypeName(str, enum.Enum):
     """Tipo di post prodotto da una base (tabella post_types)."""
 
