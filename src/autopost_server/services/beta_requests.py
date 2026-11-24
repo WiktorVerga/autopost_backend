@@ -102,8 +102,8 @@ def send_beta_request_emails(request: BetaRequestRead) -> None:
 def add_beta_request_notion(request: BetaRequestRead) -> None:
     """Salva la request come pagina in un database di notion"""
 
-    if not notion.is_configured():
-        logger.exception("Notion API is not configured")
+    if not notion.is_configured() or not settings.notion_source_id:
+        logger.warning("Notion non configurato: richiesta beta %s non copiata", request.id)
         return
 
     properties = {

@@ -109,6 +109,9 @@ class Settings(BaseSettings):
     # notion
     notion_api_key: SecretStr | None = None
     notion_source_id: str | None = None
+    # data source del database Notion dei bug report (POST /reports); senza, i report restano
+    # solo nel database
+    notion_reports_source_id: str | None = None
 
     @property
     def frontend_origin(self) -> str | None:

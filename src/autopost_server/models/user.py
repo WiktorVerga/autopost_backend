@@ -26,6 +26,7 @@ class User(Base):
     instagram_accounts: Mapped[list["InstagramAccount"]] = relationship(back_populates="user")
     idea_collections: Mapped[list["IdeaCollection"]] = relationship(back_populates="user")
     templates: Mapped[list["Template"]] = relationship(back_populates="user")
+    reports: Mapped[list["Report"]] = relationship(back_populates="user", passive_deletes=True)
 
 
 class InstagramAccount(Base):

@@ -15,6 +15,7 @@ from autopost_server.api.routes.logs import router as logs_router
 from autopost_server.api.routes.posts import router as posts_router
 from autopost_server.api.routes.programs import router as programs_router
 from autopost_server.api.routes.templates import router as templates_router
+from autopost_server.api.routes.report import router as report_router
 from autopost_server.config import settings
 from autopost_server.db import get_db
 from autopost_server.scheduler import shutdown_scheduler, start_scheduler
@@ -66,6 +67,7 @@ app.include_router(programs_router)
 app.include_router(posts_router)
 app.include_router(logs_router)
 app.include_router(templates_router)
+app.include_router(report_router)
 
 
 @app.get("/health")

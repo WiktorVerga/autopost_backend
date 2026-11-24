@@ -10,12 +10,15 @@ class NotionError(Exception):
     """Exception raised for the integration"""
 
 def is_configured() -> bool:
-    return settings.notion_api_key and settings.notion_source_id
+    """Solo la API key: ogni chiamante controlla il proprio data source ID."""
+    return bool(settings.notion_api_key)
 
-def create_page(*, data_source_id: str, properies: dict) -> str:
+def create_page(*, data_source_id: str | None, properies: dict, icon: str = "📩") -> str:
 
     if not is_configured():
-        raise NotionError("Notion is not configured (NOTION_API_KEY, NOTION_BETA_DATA_SOURCE_ID)")
+        raise NotionError("Notion is not configured (NOTION_API_KEY)")
+    if not data_source_id:
+        raise NotionError("Notion data source ID is missing")
 
     headers = {
         "Authorization": f"Bearer {settings.notion_api_key.get_secret_value()}",
@@ -24,7 +27,7 @@ def create_page(*, data_source_id: str, properies: dict) -> str:
 
     payload = {
         "parent": {"type": "data_source_id", "data_source_id": data_source_id},
-        "icon": {"type": "emoji", "emoji": "📩"},
+        "icon": {"type": "emoji", "emoji": icon},
         "properties": properies,
     }
 
