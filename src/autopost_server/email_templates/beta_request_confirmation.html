@@ -1,0 +1,44 @@
+{# Conferma a chi ha compilato il form della landing (in inglese, come il frontend). #}
+{% extends "_layout.html" %}
+
+{% block preheader %}@{{ handle }} is on the waiting list. We'll email you again once it has been added and can be connected.{% endblock %}
+
+{% block eyebrow %}Invite request{% endblock %}
+
+{% block headline %}Request received.<br><span style="color:#E4512C;">You're on the waiting list.</span>{% endblock %}
+
+{% block body %}
+<p style="margin:0 0 16px 0;">
+  Thanks for asking to join the Autopost beta. This email confirms that
+  <strong>@{{ handle }}</strong> is on the waiting list. It hasn't been added to the beta yet,
+  so for now it can't be connected to Autopost.
+</p>
+<p style="margin:0 0 24px 0;">
+  We add accounts by hand. When <strong>@{{ handle }}</strong> has been added, we'll send you a
+  second email. From that moment you can connect it from <em>Instagram accounts</em> and your
+  programs can start publishing.
+</p>
+
+{% set details_title = "What you sent us" %}
+{% set labels = {"email": "Email", "instagram": "Instagram", "company": "Company"} %}
+{% set show_meta = false %}
+{% include "_details.html" %}
+
+<p style="margin:28px 0 0 0; font-weight:700;">In the meantime</p>
+<p style="margin:6px 0 0 0;">
+  You can already sign in with Google, create collections and ideas, design your templates and
+  set up programs. They stay inactive until the account has been added and connected, so
+  nothing reaches Instagram before then.
+</p>
+
+{% if app_url %}
+  {% set button_href = app_url ~ "/login" %}
+  {% set button_label = "Sign in to the beta" %}
+  {% include "_button.html" %}
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+You're receiving this because this address was used to request an invite to the Autopost beta{% if app_host %} on {{ app_host }}{% endif %}.
+If that wasn't you, you can ignore this email: we won't write again unless the account is added.
+{% endblock %}

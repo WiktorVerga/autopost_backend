@@ -69,6 +69,14 @@ class Settings(BaseSettings):
             return f"https://{self.r2_account_id}.r2.cloudflarestorage.com"
         return None
 
+    # --- Resend, per le email delle richieste di invito alla beta ---
+    # opzionale: senza, le richieste vengono comunque salvate ma nessuna email parte
+    resend_api_key: SecretStr | None = None
+    # mittente su un dominio verificato in Resend, es. "Autopost <beta@wiktorverga.com>"
+    email_from: str | None = None
+    # chi riceve la notifica di ogni nuova richiesta beta
+    beta_requests_notify_to: str | None = None
+
     # --- Sessione e JWT ---
     # firma il cookie di sessione usato solo durante il giro OAuth (state, nonce)
     session_secret_key: SecretStr
@@ -97,6 +105,13 @@ class Settings(BaseSettings):
     anthropic_service_account_id: str | None = None
     # obbligatorio solo se la regola di federazione copre più workspace
     anthropic_workspace_id: str | None = None
+
+    # notion
+    notion_api_key: SecretStr | None = None
+    notion_source_id: str | None = None
+    # data source del database Notion dei bug report (POST /reports); senza, i report restano
+    # solo nel database
+    notion_reports_source_id: str | None = None
 
     @property
     def frontend_origin(self) -> str | None:

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from autopost_server.config import settings
 from autopost_server.db import get_db
 from autopost_server.models import User
+from autopost_server.models.enums import SignupMethod
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -95,7 +96,7 @@ def upsert_google_user(db: Session, userinfo: dict) -> User:
     if user is None:
         user = db.scalar(select(User).where(User.email == email))
     if user is None:
-        user = User(email=email, name=name[:100])
+        user = User(email=email, name=name[:100], signup_method=SignupMethod.GOOGLE)
         db.add(user)
     user.google_sub = sub
     user.email = email

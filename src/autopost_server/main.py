@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 from autopost_server.api.routes.auth import router as auth_router
+from autopost_server.api.routes.beta_requests import router as beta_requests_router
 from autopost_server.api.routes.idea_collections import router as idea_collections_router
 from autopost_server.api.routes.ideas import router as ideas_router
 from autopost_server.api.routes.instagram_accounts import router as instagram_accounts_router
@@ -14,6 +15,7 @@ from autopost_server.api.routes.logs import router as logs_router
 from autopost_server.api.routes.posts import router as posts_router
 from autopost_server.api.routes.programs import router as programs_router
 from autopost_server.api.routes.templates import router as templates_router
+from autopost_server.api.routes.report import router as report_router
 from autopost_server.config import settings
 from autopost_server.db import get_db
 from autopost_server.scheduler import shutdown_scheduler, start_scheduler
@@ -57,6 +59,7 @@ if settings.frontend_origin:
         allow_headers=["*"],
     )
 app.include_router(auth_router)
+app.include_router(beta_requests_router)
 app.include_router(idea_collections_router)
 app.include_router(ideas_router)
 app.include_router(instagram_accounts_router)
@@ -64,6 +67,7 @@ app.include_router(programs_router)
 app.include_router(posts_router)
 app.include_router(logs_router)
 app.include_router(templates_router)
+app.include_router(report_router)
 
 
 @app.get("/health")

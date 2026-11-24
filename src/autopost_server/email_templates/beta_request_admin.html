@@ -1,0 +1,37 @@
+{# Notifica all'amministratore di una nuova richiesta beta (in italiano). Reply-to: chi l'ha inviata. #}
+{% extends "_layout.html" %}
+
+{% block lang %}it{% endblock %}
+
+{% block preheader %}{{ email }} chiede un invito per @{{ handle }}.{% endblock %}
+
+{% block eyebrow %}Nuova richiesta beta{% endblock %}
+
+{% block headline %}<span style="color:#E4512C;">@{{ handle }}</span><br>chiede un invito.{% endblock %}
+
+{% block body %}
+<p style="margin:0 0 24px 0;">
+  È arrivata una nuova richiesta dal form della landing. Per abilitare l'account aggiungilo alla
+  lista inviti; rispondendo a questa email scrivi direttamente a {{ email }}.
+</p>
+
+{% set details_title = "Dati della richiesta" %}
+{% set labels = {
+  "email": "Email",
+  "instagram": "Instagram",
+  "company": "Azienda",
+  "received_at": "Ricevuta",
+  "request_id": "Richiesta",
+} %}
+{% set show_meta = true %}
+{% include "_details.html" %}
+
+{% set button_href = instagram_url %}
+{% set button_label = "Apri il profilo Instagram" %}
+{% include "_button.html" %}
+{% endblock %}
+
+{% block footer %}
+Notifica automatica di Autopost per ogni richiesta di invito alla beta. La richiesta è salvata
+nella tabella beta_requests con id {{ request_id }}.
+{% endblock %}

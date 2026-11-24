@@ -1,0 +1,33 @@
+{#
+  Riquadro con i dati della richiesta: bordo pieno in inchiostro, come la card "Without an invite"
+  della landing. Si aspetta: details_title, email, handle, instagram_url, company e,
+  facoltativi, received_at e request_id (show_meta).
+#}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 8px 0; border:2px solid #1D1713; border-radius:8px;">
+  <tr>
+    <td style="padding:22px 24px 10px 24px; font-family:Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:15px; font-weight:700; color:#1D1713;">{{ details_title }}</td>
+  </tr>
+  {% set rows = [
+    (labels.email, email, "mailto:" ~ email),
+    (labels.instagram, "@" ~ handle, instagram_url),
+    (labels.company, company or "—", None),
+  ] %}
+  {% if show_meta %}
+    {% set rows = rows + [(labels.received_at, received_at, None), (labels.request_id, "#" ~ request_id, None)] %}
+  {% endif %}
+  {% for label, value, href in rows %}
+  <tr>
+    <td style="padding:0 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td width="34%" valign="top" style="padding:10px 12px 10px 0; {% if not loop.last %}border-bottom:1px solid #DED9D1;{% endif %} font-family:'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:#6F6761;">{{ label }}</td>
+          <td valign="top" style="padding:9px 0; {% if not loop.last %}border-bottom:1px solid #DED9D1;{% endif %} font-family:Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:15px; color:#1D1713; word-break:break-word;">
+            {% if href %}<a href="{{ href }}" style="color:#1D1713; text-decoration:underline; text-underline-offset:3px;">{{ value }}</a>{% else %}{{ value }}{% endif %}
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  {% endfor %}
+  <tr><td style="height:14px; line-height:14px; font-size:0;">&nbsp;</td></tr>
+</table>
